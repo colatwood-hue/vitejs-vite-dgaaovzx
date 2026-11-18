@@ -4,7 +4,7 @@ import { useState, useTransition } from 'react'
 import { createIssue, deleteEntry, setEntryStage } from './actions'
 
 type Stage = 'seed' | 'sprouting' | 'ready' | 'used'
-interface Entry { id: string; kind: string; body: string; pillar: string; stage: Stage; created_at: string }
+interface Entry { id: string; kind: string; body: string; pillar: string; stage: Stage; created_at: string; capture_id?: string | null }
 
 const STAGES: { key: Stage; label: string; hint: string }[] = [
   { key: 'seed', label: 'Seed', hint: 'Raw. Most stay here.' },
@@ -51,6 +51,7 @@ export function EntryBoard({ entries }: { entries: Entry[] }) {
                       <span className="font-semibold uppercase tracking-wider text-accent">{e.pillar}</span>
                       <span>· {e.kind.replace('_', ' ')}</span>
                       <span>· {new Date(e.created_at).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}</span>
+                      {e.capture_id && <a href={`/studio/library/${e.capture_id}`} className="text-accent underline">from library</a>}
                     </div>
                     <div className="mt-2 flex flex-wrap items-center gap-1">
                       {s.key !== 'used' && (

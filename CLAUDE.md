@@ -1,6 +1,8 @@
 # The Dash
 
-A personal newsletter studio for Col: capture raw observations, develop them into letters, approve, publish to a public archive, and (from milestone 2) email subscribers.
+Col's private **knowledge and reflection system** (capture, library, search, and later AI-assisted thinking), plus a **newsletter studio** that is one optional output of it: develop ideas into letters, approve, publish, and email readers.
+
+Data handling, backup, AI and copyright rules: `docs/DATA.md`. Roadmap and status: `docs/PLAN.md`.
 
 **Editorial rules live in `.claude/skills/dash-editorial-system/SKILL.md`. Load it for any writing, drafting or workflow work.** The short version: never invent experiences, preserve Col's voice, challenge weak claims, no clichés, and nothing publishes without Col's approval.
 
@@ -23,8 +25,10 @@ Next.js 16 notes: `middleware.ts` is now **`src/proxy.ts`**; `params` is a Promi
 
 ```
 src/app/                 routes (public: /, /issues/[slug]; studio: /studio/**; /login)
-src/app/studio/actions.ts all studio mutations (server actions)
-src/lib/                 db, auth/session, issues queries, render (Tiptap→HTML), email, validation, site config
+src/app/studio/actions.ts newsletter mutations (server actions)
+src/app/studio/library/  knowledge library: list/search, detail, actions.ts (capture CRUD, promote)
+src/app/studio/capture/  mobile-first universal capture (text, links, voice, files)
+src/lib/                 db, auth/session, knowledge (library), issues, subscribers, sending, mailer, render, validation, site
 src/emails/              React Email templates
 src/proxy.ts             fast redirect for /studio (NOT the security boundary)
 supabase/migrations/     SQL migrations, applied by scripts/migrate.mjs
@@ -55,6 +59,15 @@ Local Postgres: `postgres://dash:dash@localhost:5432/dash` (dev) and `.../dash_t
 - Never write code that moves a subscriber out of `unsubscribed`/`bounced`/`complained`, except the subscriber's own new double opt-in (and never for bounced/complained).
 - Sending invariants (enforced server-side in `src/lib/sending.ts`): issue published, a test sent after the latest approval, the typed recipient count matches, at most one `sends` row per issue. Claude never triggers a real send.
 - Public endpoints are rate-limited (`src/lib/rate-limit.ts`) and must not reveal whether an email is subscribed.
+
+## Knowledge system rules
+
+- Keep third-party material (`captures.content` + provenance fields) separate from Col's words (`captures.reaction`). Never merge them, and never present a source's words as Col's.
+- Derived text (`summary`, `transcript`, later AI output) records its origin (`human`/`ai`). AI never overwrites human text without Col accepting it.
+- Library content is private. No code path may publish or email library content automatically; it reaches the newsletter only through **Promote to newsletter** and then the approval gate.
+- History is append-only where it matters (belief versions, phase 2). Don't overwrite past statements.
+- Attachments: allowlisted MIME types only, served from an auth-checked route with `nosniff` + sandbox CSP. Never serve user files as HTML/SVG.
+- Basic retrieval (Postgres FTS) comes before embeddings/vector search.
 
 ## Testing rules
 

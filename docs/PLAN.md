@@ -1,5 +1,36 @@
 # The Dash: implementation plan
 
+The app has two parts: a **private knowledge and reflection system** (the library) and the **newsletter**, which is one optional output of it.
+
+## Knowledge system
+
+### ✅ Phase 1a: Functional foundation (done)
+- Mobile-first **Capture**: thought, quote, book, film, social post, conversation, experience, journal, other
+- Original material (`content`), provenance (link, attribution, source title, locator, date encountered) and Col's reaction (`reaction`) are separate fields. For thought/journal/experience the text is Col's own words; for everything else it's third-party material
+- Attachments: in-browser voice-note recording, audio, images, PDF, text (allowlisted types, 4 MB per capture, auth-gated download, sandboxed)
+- Tags; Postgres full-text search (weighted: titles/authors > reactions/summaries > source text) with safe highlighting; type and tag filters
+- Detail page with edit; summary/transcript fields record `human` vs `ai` origin
+- **Promote to newsletter**: creates one linked idea quoting the source with attribution; never modifies the capture
+- JSON export of everything; delete; `docs/DATA.md` for storage, backup, AI and copyright guidance
+- **Tests:** access control on pages, files and export; field separation and provenance; own-words vs source kinds; voice recording (fake mic); file-type and URL validation; search by reaction, author, tag and type; XSS-safe results; promotion (linked, attributed, capture unchanged, once only); edit origin; export contents; delete
+
+### Phase 1b: AI assistance (needs `ANTHROPIC_API_KEY` and a transcription provider)
+- Optional voice transcription → `transcript` (origin `ai`, editable)
+- "Summarise" button → `summary` (origin `ai`, editable)
+
+### Phase 2: Thinking partner
+- Schema: `beliefs` + `belief_versions` (append-only, dated), `endorsements` (Col explicitly endorses a capture's idea, distinct from merely saving it), `links` (capture↔capture: supports / contradicts / expands / applies / questions; `status` suggested/accepted/rejected; `origin` human/ai), `conversations` + `messages` with `citations` (message → capture ids)
+- Grounded chat over selected captures, then over the library via full-text retrieval (embeddings and pgvector only after this works). Modes: Socratic, critique, counterargument, comprehension, synthesis
+- Every claim about Col's thinking must cite capture ids, validated server-side against what was retrieved. Uncited claims are flagged
+- AI-suggested links and interpretations land as `suggested`, and Col accepts or rejects them
+
+### Phase 3: Rediscovery
+- Daily reflection (resurface an old capture + one question), weekly synthesis, monthly philosophy review comparing belief versions over time
+- User-controlled schedule (Vercel Cron + preferences); reminders by email to Col only
+- Newsletter topic suggestions built only from accepted links and endorsed beliefs, citing captures, never inventing narrative
+
+## Newsletter
+
 Each milestone is independently shippable and has its own Playwright coverage.
 
 ## ✅ Milestone 1: Write and publish (done)

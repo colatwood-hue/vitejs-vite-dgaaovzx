@@ -27,9 +27,9 @@ export interface Issue {
 
 export type EntryKind = 'observation' | 'journal' | 'voice_note' | 'quote' | 'question' | 'reading'
 export type EntryStage = 'seed' | 'sprouting' | 'ready' | 'used'
-export interface Entry { id: string; kind: EntryKind; body: string; pillar: string; stage: EntryStage; created_at: Date }
+export interface Entry { id: string; kind: EntryKind; body: string; pillar: string; stage: EntryStage; created_at: Date; capture_id?: string | null }
 
-export const listEntries = () => sql<Entry[]>`select id, kind, body, pillar, stage, created_at from entries order by created_at desc limit 500`
+export const listEntries = () => sql<Entry[]>`select id, kind, body, pillar, stage, created_at, capture_id from entries order by created_at desc limit 500`
 
 export const listIssues = () => sql<Issue[]>`select * from issues order by number desc`
 

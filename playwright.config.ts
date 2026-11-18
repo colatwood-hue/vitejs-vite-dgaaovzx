@@ -15,7 +15,14 @@ export default defineConfig({
   reporter: process.env.CI ? 'github' : 'list',
   use: { baseURL: `http://localhost:${PORT}`, trace: 'off' },
   projects: [
-    { name: 'desktop', use: { ...devices['Desktop Chrome'] } },
+    {
+      name: 'desktop',
+      use: {
+        ...devices['Desktop Chrome'],
+        // Fake microphone so voice-note recording can be tested.
+        launchOptions: { args: ['--use-fake-ui-for-media-stream', '--use-fake-device-for-media-stream'] },
+      },
+    },
     { name: 'mobile', use: { ...devices['Pixel 7'] }, grep: /@mobile/ },
   ],
   webServer: {
