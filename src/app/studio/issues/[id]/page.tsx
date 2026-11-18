@@ -3,7 +3,10 @@ import { getIssue, getSources } from '@/lib/issues'
 import { requireStudio } from '@/lib/session'
 import { site } from '@/lib/site'
 import { uuid } from '@/lib/validation'
+import { emailConfig } from '@/lib/mailer'
+import { activeSubscriberCount, getSendSummary } from '@/lib/sending'
 import { IssueEditor } from './IssueEditor'
+import { SendPanel } from './SendPanel'
 
 export const metadata = { title: 'Edit letter' }
 
@@ -13,7 +16,8 @@ export default async function EditIssuePage(props: PageProps<'/studio/issues/[id
   if (!uuid.safeParse(id).success) notFound()
   const issue = await getIssue(id)
   if (!issue) notFound()
-  const sources = await getSources(id)
+  const [sources, send, activeCount] = await Promise.all([getSources(id), getSendSummary(id), activeSubscriberCount()])
+  const testIsCurrent = !!(issue.test_sent_at && issue.approved_at && issue.test_sent_at >= issue.approved_at)
 
   return (
     <IssueEditor
@@ -34,6 +38,16 @@ export default async function EditIssuePage(props: PageProps<'/studio/issues/[id
         updatedAt: issue.updated_at.toISOString(),
       }}
       sources={sources.map((s) => ({ id: s.id, body: s.body, kind: s.kind, pillar: s.pillar }))}
+      sendPanel={
+        <SendPanel
+          issueId={issue.id}
+          status={issue.status}
+          ownerEmail={emailConfig().owner ?? null}
+          testIsCurrent={testIsCurrent}
+          activeCount={activeCount}
+          send={send && { id: send.id, status: send.status, recipients: send.recipients, createdAt: send.created_at.toISOString(), counts: send.counts }}
+        />
+      }
     />
   )
 }

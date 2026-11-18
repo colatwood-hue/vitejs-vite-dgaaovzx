@@ -13,15 +13,21 @@ Each milestone is independently shippable and has its own Playwright coverage.
 - Public home + archive + issue pages
 - **Tests:** auth redirect, wrong password, forged cookie, unauthenticated preview, full capture→publish flow, approval reset on edit, unsafe link rejection, mobile overflow
 
-## Milestone 2: Subscribers and sending (needs Supabase + Resend)
-- Move to the hosted Supabase project; replace password auth with Supabase Auth magic link restricted to Col's email
-- `subscribers` table: double opt-in, consent timestamp/source, hashed tokens, status
-- Public subscribe form (rate-limited) → confirmation email → confirmed
-- One-click unsubscribe page + `List-Unsubscribe` / `List-Unsubscribe-Post` headers
-- Send flow: test send to Col → confirm → batched send via Resend; `sends` + per-recipient `deliveries` tables; idempotent retries
-- Resend webhooks (signature verified) for delivered / bounced / complained → auto-suppress
-- CSV import of an existing contact list, with a consent checkbox
-- **Tests:** subscribe/confirm/unsubscribe via log transport; send blocked unless published + confirmed
+## ✅ Milestone 2: Subscribers and sending (done, except the auth swap)
+- `subscribers` with consent source and timestamp, statuses pending/active/unsubscribed/bounced/complained; RLS on
+- Public double opt-in: subscribe form (honeypot, per-IP and per-email rate limits, identical response whether or not the address exists) → confirmation email (hashed single-use token, 48h) → confirm **button** (link scanners can't confirm)
+- Unsubscribe: signed stateless token; `/unsubscribe` page + RFC 8058 one-click `POST /api/unsubscribe`; `List-Unsubscribe` + `List-Unsubscribe-Post` headers on every issue email
+- Studio Readers page: counts, list, owner-add/CSV paste with a consent attestation; existing rows are never modified, so unsubscribes/bounces can't be undone
+- Send flow: test to `OWNER_EMAIL` after the latest approval → publish → type the recipient count → one send per issue (unique constraint) → batches of 100 via Resend with idempotency keys → per-recipient `deliveries`; resumable and retryable
+- Resend webhooks: Svix signature + 5-minute timestamp window, idempotent by event id; bounces and complaints suppress the reader
+- Transport: `log` (file) for dev/tests, `resend` (REST API) for production
+- **Tests:** double opt-in, scanner-safe confirm, token reuse, no enumeration, honeypot, rate limit, consent attestation, no resubscribe, stale-test guard, typed confirmation, one-send-only, per-reader unsubscribe tokens + headers, one-click and page unsubscribe, forged tokens, webhook signature/expiry/replay/bounce
+
+### Still to do in milestone 2 (needs your accounts)
+- **Verify the Resend transport for real.** The REST call is written to Resend's documented API but has only been exercised through the log transport. First real run: send a test to yourself.
+- **Supabase Auth** magic link, restricted to Col's email, replacing the studio password.
+- Scheduled cleanup of unconfirmed signups older than 30 days, and of old `rate_limits` rows.
+- Sends run inside the server action: fine for hundreds of readers. Beyond a few thousand, move processing to a background job (Vercel Cron or a queue).
 
 ## Milestone 3: Editorial assistant (needs Anthropic API key)
 - Claude-powered Interpret / Challenge / Interview / Draft / Edit, following `dash-editorial-system`

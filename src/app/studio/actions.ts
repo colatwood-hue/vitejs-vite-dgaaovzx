@@ -8,6 +8,8 @@ import { getIssue, slugify, type EntryStage } from '@/lib/issues'
 import { docToText } from '@/lib/render'
 import { requireStudio } from '@/lib/session'
 import { entryInput, issueInput, uuid, type IssueInput } from '@/lib/validation'
+import { addConsented, unsubscribe } from '@/lib/subscribers'
+import { retryFailed, sendTestEmail, startSend } from '@/lib/sending'
 
 export type ActionState = { error?: string; ok?: boolean } | undefined
 
@@ -113,4 +115,69 @@ export async function deleteIssue(id: string) {
   await sql`delete from issues where id = ${uuid.parse(id)} and status <> 'published'`
   revalidatePath('/studio')
   redirect('/studio')
+}
+
+// ── Milestone 2: subscribers and sending ────────────────────────────────────
+
+const personSchema = z.object({
+  email: z.email().max(254).transform((e) => e.trim().toLowerCase()),
+  name: z.string().trim().max(100),
+})
+
+/** Accepts `email`, `email,name`, `name,email` or `Name <email>` per line. */
+function parsePeople(text: string) {
+  const people: { email: string; name: string }[] = []
+  const invalid: string[] = []
+  for (const raw of text.split(/\r?\n/)) {
+    const line = raw.trim()
+    if (!line || /^email\b/i.test(line)) continue
+    const angle = line.match(/^(.*)<([^>]+)>$/)
+    const parts = angle ? [angle[2], angle[1]] : line.split(',').map((p) => p.trim().replace(/^"|"$/g, ''))
+    const emailIdx = parts.findIndex((p) => p.includes('@'))
+    const parsed = personSchema.safeParse({ email: parts[emailIdx] ?? '', name: (parts.find((_, i) => i !== emailIdx) ?? '').trim() })
+    if (parsed.success) people.push(parsed.data)
+    else invalid.push(line)
+  }
+  return { people, invalid }
+}
+
+export type AddState = { error?: string; ok?: boolean; added?: number; skipped?: number; invalid?: string[] } | undefined
+
+export async function addSubscribers(_: AddState, form: FormData): Promise<AddState> {
+  await requireStudio()
+  if (form.get('consent') !== 'on') return { error: 'Only add people who have told you they want to receive it.' }
+  const { people, invalid } = parsePeople(String(form.get('people') ?? ''))
+  if (people.length === 0) return { error: invalid.length ? `No valid addresses found (${invalid.length} invalid).` : 'Paste at least one email address.' }
+  if (people.length > 2000) return { error: 'Import at most 2,000 at a time.' }
+  const source = people.length === 1 ? 'personal_invite' : 'import'
+  const added = await addConsented(people, source)
+  revalidatePath('/studio/subscribers')
+  return { ok: true, added, skipped: people.length - added, invalid }
+}
+
+export async function removeSubscriber(id: string) {
+  await requireStudio()
+  await unsubscribe(uuid.parse(id))
+  revalidatePath('/studio/subscribers')
+}
+
+export async function sendTest(id: string): Promise<ActionState & { to?: string }> {
+  await requireStudio()
+  const res = await sendTestEmail(uuid.parse(id))
+  revalidatePath(`/studio/issues/${id}`)
+  return res
+}
+
+export async function sendIssue(id: string, typedCount: number): Promise<ActionState & { failed?: number }> {
+  await requireStudio()
+  const res = await startSend(uuid.parse(id), z.number().int().parse(typedCount))
+  revalidatePath(`/studio/issues/${id}`)
+  return res
+}
+
+export async function retrySend(issueId: string, sendId: string): Promise<ActionState & { failed?: number }> {
+  await requireStudio()
+  const res = await retryFailed(uuid.parse(sendId))
+  revalidatePath(`/studio/issues/${issueId}`)
+  return res
 }

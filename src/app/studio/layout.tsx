@@ -15,6 +15,7 @@ export default async function StudioLayout({ children }: { children: React.React
           <nav className="flex gap-1 text-sm">
             <Link href="/studio" className="btn btn-ghost btn-sm">Inbox</Link>
             <Link href="/studio/issues" className="btn btn-ghost btn-sm">Issues</Link>
+            <Link href="/studio/subscribers" className="btn btn-ghost btn-sm">Readers</Link>
             <Link href="/studio/playbook" className="btn btn-ghost btn-sm">Playbook</Link>
           </nav>
           <div className="ml-auto flex items-center gap-2">

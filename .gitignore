@@ -9,3 +9,5 @@ playwright-report
 test-results
 .DS_Store
 tsconfig.tsbuildinfo
+.email-log.jsonl
+.e2e-email-log.jsonl

@@ -1,6 +1,7 @@
 import Link from 'next/link'
 import { listPublished } from '@/lib/issues'
 import { site } from '@/lib/site'
+import { SubscribeForm } from '@/components/SubscribeForm'
 
 export const dynamic = 'force-dynamic'
 
@@ -17,8 +18,8 @@ export default async function Home() {
         </h1>
         <p className="mt-6 font-serif text-2xl leading-snug text-ink-2">{site.tagline}</p>
         <p className="mt-4 max-w-xl text-[15px] leading-relaxed text-muted">{site.description}</p>
-        <div className="mt-8 rounded-lg border border-dashed border-line px-4 py-3 text-sm text-muted">
-          Subscriptions open soon. For now, this letter goes to people I know personally.
+        <div className="mt-8">
+          <SubscribeForm />
         </div>
       </header>
 

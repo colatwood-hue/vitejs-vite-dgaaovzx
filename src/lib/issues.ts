@@ -19,6 +19,7 @@ export interface Issue {
   links: IssueLink[]
   question: string
   approved_at: Date | null
+  test_sent_at: Date | null
   published_at: Date | null
   created_at: Date
   updated_at: Date

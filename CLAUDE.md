@@ -12,7 +12,7 @@ A personal newsletter studio for Col: capture raw observations, develop them int
 | Styling | Tailwind CSS v4 (`@theme` tokens in `src/app/globals.css`), `@tailwindcss/typography` |
 | Database | Postgres (Supabase in production), accessed **only from the server** with `postgres` (porsager) |
 | Editor | Tiptap v3 (StarterKit); content stored as JSON and rendered to HTML on the server |
-| Email | React Email templates (`src/emails/`); Resend for delivery (milestone 2) |
+| Email | React Email templates (`src/emails/`); `src/lib/mailer.ts` sends via Resend's REST API, or a JSONL log file in dev/tests |
 | Validation | zod v4 at every server boundary |
 | Tests | Playwright e2e against a real Postgres test database |
 | Deploy | Vercel |
@@ -51,14 +51,17 @@ Local Postgres: `postgres://dash:dash@localhost:5432/dash` (dev) and `.../dash_t
 - RLS is **enabled with no policies** on every table, so Supabase's anon/authenticated keys can't touch data. Every new table must do the same in its migration.
 - Validate all input with zod. Links must be `http(s)`. Editor HTML is generated server-side from schema-constrained JSON, and hrefs are filtered again.
 - Secrets live only in env vars (`.env.local` locally, Vercel/Supabase dashboards in production). Never commit them, log them, or send them to the client. Only `NEXT_PUBLIC_*` reaches the browser.
-- Subscriber data (milestone 2): store the minimum; double opt-in; consent timestamp + source; one-click unsubscribe (RFC 8058 `List-Unsubscribe` headers); hash tokens at rest.
+- Subscriber data: store the minimum; double opt-in; consent timestamp + source; one-click unsubscribe (RFC 8058 `List-Unsubscribe` headers); confirm tokens hashed at rest; unsubscribe tokens are HMAC-signed with `TOKEN_SECRET`.
+- Never write code that moves a subscriber out of `unsubscribed`/`bounced`/`complained`, except the subscriber's own new double opt-in (and never for bounced/complained).
+- Sending invariants (enforced server-side in `src/lib/sending.ts`): issue published, a test sent after the latest approval, the typed recipient count matches, at most one `sends` row per issue. Claude never triggers a real send.
+- Public endpoints are rate-limited (`src/lib/rate-limit.ts`) and must not reveal whether an email is subscribed.
 
 ## Testing rules
 
 - New user-facing behaviour gets a Playwright test in `e2e/`. Tests run against a real database, so don't mock the DB.
 - Use accessible locators (`getByRole`, `getByLabel`). App error messages are `p[role=alert]`, because Next adds its own `role=alert` route announcer.
 - Don't claim something works until `npm run lint`, `npm run typecheck` and `npm run test:e2e` pass. Run them before every commit.
-- Email sending is tested with a log transport, never against real inboxes.
+- Email sending is tested with the log transport (`EMAIL_TRANSPORT=log`), never against real inboxes. Tests read `.e2e-email-log.jsonl` via `emails()` in `e2e/helpers.ts`.
 
 ## Conventions
 

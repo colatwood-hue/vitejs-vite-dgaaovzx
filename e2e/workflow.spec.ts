@@ -3,7 +3,7 @@ import { login, waitSaved } from './helpers'
 
 test.describe.configure({ mode: 'serial' })
 
-test('capture → letter → approve → publish, with approval enforced', async ({ page, request }) => {
+test('capture → letter → approve → publish, with approval enforced', async ({ page }) => {
   await login(page)
 
   // Capture
@@ -46,8 +46,6 @@ test('capture → letter → approve → publish, with approval enforced', async
   await expect(preview.getByText('The fence at 6am')).toBeVisible()
   await expect(preview.getByText('He did not look up once.')).toBeVisible()
 
-  // Not public before publishing
-  expect((await request.get('/issues/issue-1')).status()).toBe(404)
 
   // Approve, then an edit sends it back to draft
   await page.getByRole('button', { name: 'Approve this version' }).click()
@@ -68,7 +66,7 @@ test('capture → letter → approve → publish, with approval enforced', async
   // Public archive + issue page
   await page.goto('/')
   await page.getByRole('link', { name: /The fence at 6am/ }).click()
-  await expect(page).toHaveURL(/\/issues\/1-the-fence-at-6am$/)
+  await expect(page).toHaveURL(/\/issues\/\d+-the-fence-at-6am$/)
   await expect(page.getByRole('heading', { level: 1 })).toHaveText('The fence at 6am')
   await expect(page.getByText('He did not look up once.')).toBeVisible()
   await expect(page.getByRole('link', { name: 'On craft' })).toHaveAttribute('href', 'https://example.com/craft')

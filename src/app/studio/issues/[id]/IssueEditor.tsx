@@ -3,6 +3,7 @@
 import { EditorContent, useEditor, type JSONContent } from '@tiptap/react'
 import { Placeholder } from '@tiptap/extensions'
 import Link from 'next/link'
+import { useRouter } from 'next/navigation'
 import { useCallback, useEffect, useRef, useState, useTransition } from 'react'
 import { editorExtensions } from '@/lib/content'
 import type { IssueInput } from '@/lib/validation'
@@ -14,6 +15,7 @@ interface Props {
   siteUrl: string
   issue: IssueInput & { id: string; number: number; slug: string; status: Status; updatedAt: string; body: JSONContent }
   sources: { id: string; body: string; kind: string; pillar: string }[]
+  sendPanel?: React.ReactNode
 }
 
 const words = (s: string) => s.split(/\s+/).filter(Boolean).length
@@ -60,7 +62,8 @@ function Toolbar({ editor }: { editor: ReturnType<typeof useEditor> | null }) {
   )
 }
 
-export function IssueEditor({ issue, sources, siteUrl }: Props) {
+export function IssueEditor({ issue, sources, siteUrl, sendPanel }: Props) {
+  const router = useRouter()
   const locked = issue.status === 'published'
   const [draft, setDraft] = useState<IssueInput>({
     subject: issue.subject, preview: issue.preview, title: issue.title, opening: issue.opening,
@@ -121,6 +124,7 @@ export function IssueEditor({ issue, sources, siteUrl }: Props) {
       if (res && res.error) { setError(res.error); return }
       setError('')
       if (next) setStatus(next)
+      router.refresh()
     })
 
   return (
@@ -199,7 +203,7 @@ export function IssueEditor({ issue, sources, siteUrl }: Props) {
           <h2 className="eyebrow">Approve · Publish</h2>
           <p className="mt-2 text-sm text-ink-2">
             {status === 'draft' && 'Nothing goes out without your approval. Approving locks in this exact version, and any later edit returns it to draft.'}
-            {status === 'approved' && 'Approved. Publishing puts it in the public archive. Email sending comes in milestone 2.'}
+            {status === 'approved' && 'Approved. Send yourself a test below, then publish to the archive. Emailing readers comes after publishing.'}
             {status === 'published' && <>Published at <a className="text-accent underline" href={`/issues/${issue.slug}`} target="_blank">{siteUrl.replace(/^https?:\/\//, '')}/issues/{issue.slug}</a>.</>}
           </p>
           <p className="mt-1 text-xs text-muted">~{total} words · {Math.max(1, Math.round(total / 230))} min read</p>
@@ -217,6 +221,7 @@ export function IssueEditor({ issue, sources, siteUrl }: Props) {
             )}
           </div>
         </section>
+        {sendPanel}
       </div>
 
       <aside className="min-w-0 xl:sticky xl:top-20 xl:self-start">
