@@ -1,0 +1,67 @@
+@import 'tailwindcss';
+@plugin '@tailwindcss/typography';
+
+@theme {
+  --font-serif: var(--font-newsreader), Georgia, 'Times New Roman', serif;
+  --font-sans: var(--font-inter), system-ui, sans-serif;
+
+  --color-paper: #f4efe6;
+  --color-sheet: #fffdf8;
+  --color-ink: #1c1917;
+  --color-ink-2: #44403c;
+  --color-muted: #857d73;
+  --color-line: #e7dfd2;
+  --color-wash: #ece4d6;
+  --color-accent: #9a3412;
+  --color-accent-soft: #f6e3d6;
+  --color-ok: #3f6212;
+  --color-danger: #b91c1c;
+}
+
+@media (prefers-color-scheme: dark) {
+  :root {
+    --color-paper: #15130f;
+    --color-sheet: #1d1a16;
+    --color-ink: #f2ece2;
+    --color-ink-2: #d6cec2;
+    --color-muted: #9b9184;
+    --color-line: #332e27;
+    --color-wash: #26221c;
+    --color-accent: #f0915a;
+    --color-accent-soft: #3a2418;
+    --color-ok: #a3c46a;
+    --color-danger: #f28b82;
+  }
+}
+
+html { background: var(--color-paper); color: var(--color-ink); }
+body { font-family: var(--font-sans); -webkit-font-smoothing: antialiased; }
+::selection { background: var(--color-accent-soft); }
+
+.eyebrow { @apply font-sans text-[11px] font-semibold uppercase tracking-[0.22em] text-muted; }
+.field { @apply w-full rounded-md border border-line bg-sheet px-3 py-2 text-[15px] text-ink placeholder:text-muted/70 focus:border-accent focus:outline-none focus:ring-2 focus:ring-accent/20; }
+.btn { @apply inline-flex items-center justify-center gap-2 rounded-md border border-line bg-sheet px-3.5 py-2 text-sm font-medium text-ink transition hover:border-ink-2 disabled:cursor-not-allowed disabled:opacity-50; }
+.btn-primary { @apply border-ink bg-ink text-sheet hover:bg-ink-2; }
+.btn-accent { @apply border-accent bg-accent text-white hover:opacity-90; }
+.btn-ghost { @apply border-transparent bg-transparent hover:bg-wash; }
+.btn-sm { @apply px-2.5 py-1 text-[13px]; }
+
+.prose-dash {
+  @apply prose prose-lg max-w-none font-serif;
+  --tw-prose-body: var(--color-ink-2);
+  --tw-prose-headings: var(--color-ink);
+  --tw-prose-links: var(--color-accent);
+  --tw-prose-bold: var(--color-ink);
+  --tw-prose-quotes: var(--color-ink-2);
+  --tw-prose-quote-borders: var(--color-accent);
+  --tw-prose-bullets: var(--color-muted);
+  --tw-prose-counters: var(--color-muted);
+  --tw-prose-hr: var(--color-line);
+}
+.prose-dash :where(p) { line-height: 1.75; }
+
+/* Tiptap */
+.tiptap { outline: none; min-height: 22rem; }
+.tiptap p.is-editor-empty:first-child::before {
+  content: attr(data-placeholder); float: left; height: 0; pointer-events: none; color: var(--color-muted); font-style: italic;
+}

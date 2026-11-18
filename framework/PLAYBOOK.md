@@ -139,17 +139,10 @@ Write **three** subject lines for every issue and pick the best. Later, when you
 
 ## 6. Tools and setup
 
-### Pick one email platform
-You want: free to start, good deliverability, simple analytics (opens, clicks), and room to grow. Any of these is a solid choice:
+### How The Dash sends email
+The Dash runs its own studio: you write, approve and publish there, and (from milestone 2) it sends through **Resend**. You own the drafts, the subscriber list and the send button. Kit, Beehiiv or Substack can be added later if you want their growth features.
 
-| Platform | Why you'd choose it |
-|---|---|
-| **Kit** (formerly ConvertKit) | Industry-standard *email marketing* tool. Learn tags, sequences and automations properly. Free tier for small lists. |
-| **Beehiiv** | Built for newsletters, with good growth tools (referrals, recommendations). Free tier. |
-| **Buttondown** | Minimal, markdown-friendly, made for writers. Small free tier. |
-| **Substack** | Easiest to start, with a built-in web archive and discovery. Less control and less "marketing" learning. |
-
-**Recommendation for your goal of learning email marketing: Kit or Beehiiv.** They teach the concepts (segments, automations, welcome sequences, landing pages) you'll use when you take this further.
+Until sending is built: write in the studio, use **Download HTML** for the email, and send it through any email tool that accepts HTML.
 
 > Please **don't** send from your personal Gmail with everyone in BCC once you're past about 15 people. You get no analytics, no unsubscribe link, and a much higher chance of landing in spam.
 
