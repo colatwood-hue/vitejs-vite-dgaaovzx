@@ -77,7 +77,11 @@ export async function saveIssueAction(input: z.input<typeof saveSchema>): Promis
 export async function approveAction(_prev: FormState, form: FormData): Promise<FormState> {
   await requireUser();
   const id = String(form.get("id"));
-  await approveIssue(id);
+  try {
+    await approveIssue(id);
+  } catch (err) {
+    return { ok: false, message: (err as Error).message };
+  }
   refresh(id);
   return { ok: true, message: "Approved. This exact version can now be published or sent." };
 }

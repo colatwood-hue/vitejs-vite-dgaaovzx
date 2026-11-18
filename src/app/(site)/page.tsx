@@ -120,6 +120,12 @@ export default async function Home() {
               </Link>
             </li>
           ))}
+          <li className="bg-paper">
+            <Link href="/archive" className="flex h-full flex-col justify-between p-6 hover:bg-card">
+              <span className="font-serif text-xl italic text-ink-soft">Or simply start at the beginning.</span>
+              <span className="mt-4 text-sm text-bronze">Every letter →</span>
+            </Link>
+          </li>
         </ul>
       </section>
 

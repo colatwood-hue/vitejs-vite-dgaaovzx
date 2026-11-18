@@ -1,4 +1,4 @@
-import { and, desc, eq, isNotNull, lte, max, ne, sql } from "drizzle-orm";
+import { and, desc, eq, gt, isNotNull, lt, lte, max, ne } from "drizzle-orm";
 import { db } from "@/db";
 import { ideas, issueRevisions, issues, pillars } from "@/db/schema";
 import { sha256 } from "./crypto";
@@ -151,12 +151,20 @@ export async function restoreRevision(issueId: string, revisionId: string) {
   );
 }
 
+const PLACEHOLDER = /\[COL:[^\]]*\]/gi;
+
+/** AI drafts mark missing personal material as [COL: …]. These must be filled before approval. */
+export function unfilledPlaceholders(i: Pick<Issue, "title" | "subtitle" | "bodyMd" | "recommendationMd" | "closingMd" | "subject" | "previewText">): string[] {
+  return [i.title, i.subtitle, i.bodyMd, i.recommendationMd, i.closingMd, i.subject, i.previewText].flatMap((t) => t.match(PLACEHOLDER) ?? []);
+}
+
 export function publishChecklist(i: Issue, opts: { senderGaps: string[]; testSent: boolean }) {
   return [
     { key: "title", label: "Title written", ok: i.title.trim().length > 0 && i.title !== "Untitled letter" },
     { key: "body", label: "Main essay has at least 150 words", ok: i.bodyMd.trim().split(/\s+/).length >= 150 },
     { key: "subject", label: "Subject line set", ok: i.subject.trim().length > 0 },
     { key: "preview", label: "Preview text set", ok: i.previewText.trim().length > 0 },
+    { key: "placeholders", label: "No unfilled [COL: …] placeholders", ok: unfilledPlaceholders(i).length === 0 },
     { key: "closing", label: "Closing reflection or question", ok: i.closingMd.trim().length > 0, optional: true },
     { key: "sender", label: "Sender identity & mailing address (CASL)", ok: opts.senderGaps.length === 0 },
     { key: "test", label: "Test email sent and reviewed", ok: opts.testSent },
@@ -167,6 +175,8 @@ export function publishChecklist(i: Issue, opts: { senderGaps: string[]; testSen
 export async function approveIssue(id: string) {
   const [i] = await db.select().from(issues).where(eq(issues.id, id));
   if (!i) throw new Error("Issue not found");
+  const holes = unfilledPlaceholders(i);
+  if (holes.length) throw new Error(`Fill or remove ${holes.length} placeholder(s) first, e.g. ${holes[0]}`);
   await snapshot(i, "manual", "Approved version");
   const [row] = await db
     .update(issues)
@@ -254,13 +264,13 @@ export async function adjacentIssues(publishedAt: Date) {
   const [prev] = await db
     .select({ slug: issues.slug, title: issues.title })
     .from(issues)
-    .where(and(isNotNull(issues.publishedAt), sql`${issues.publishedAt} < ${publishedAt}`))
+    .where(and(isNotNull(issues.publishedAt), lt(issues.publishedAt, publishedAt)))
     .orderBy(desc(issues.publishedAt))
     .limit(1);
   const [next] = await db
     .select({ slug: issues.slug, title: issues.title })
     .from(issues)
-    .where(and(isNotNull(issues.publishedAt), sql`${issues.publishedAt} > ${publishedAt}`, lte(issues.publishedAt, new Date())))
+    .where(and(isNotNull(issues.publishedAt), gt(issues.publishedAt, publishedAt), lte(issues.publishedAt, new Date())))
     .orderBy(issues.publishedAt)
     .limit(1);
   return { prev: prev ?? null, next: next ?? null };

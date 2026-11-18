@@ -205,10 +205,10 @@ export default async function IssuePage({ params }: { params: Promise<{ id: stri
                   <button className="text-xs text-muted underline">Unpublish from website</button>
                 </form>
               </div>
+            ) : approved ? (
+              <ActionForm action={publishWebAction} hidden={{ id }} submitLabel="Publish to website" buttonClassName="btn btn-sm" className="mt-3" confirmMessage="Publish this issue on the public website?" />
             ) : (
-              <ActionForm action={publishWebAction} hidden={{ id }} submitLabel="Publish to website" buttonClassName="btn btn-sm" className="mt-3" confirmMessage="Publish this issue on the public website?">
-                {!approved && <p className="mb-2 text-xs text-muted">Approve first.</p>}
-              </ActionForm>
+              <p className="mt-3 text-sm text-muted">Approve the final version to unlock publishing.</p>
             )}
           </section>
 

@@ -1,73 +1,63 @@
-# React + TypeScript + Vite
+# The Dash
 
-This template provides a minimal setup to get React working in Vite with HMR and some ESLint rules.
+**A letter about life, becoming, and everything in between.** A personal newsletter by Col Atwood, part of *Who Is Col*.
 
-Currently, two official plugins are available:
+This repository holds both halves of the publication:
 
-- [@vitejs/plugin-react](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react) uses [Babel](https://babeljs.io/) (or [oxc](https://oxc.rs) when used in [rolldown-vite](https://vite.dev/guide/rolldown)) for Fast Refresh
-- [@vitejs/plugin-react-swc](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react-swc) uses [SWC](https://swc.rs/) for Fast Refresh
+- **The public site:** home, archive (by date and theme), issue pages with SEO metadata, About, Subscribe (double opt-in), email preferences, one-click unsubscribe, privacy & contact, and RSS.
+- **The private editorial studio** (`/studio`): Thought Inbox (text, voice, audio upload, transcription), Idea Library & pipeline, AI editorial partner, issue editor, publishing, subscribers & consent, analytics & feedback, repurposing, and settings.
 
-## React Compiler
+> The software should never become more complicated than writing the newsletter itself.
 
-The React Compiler is not enabled on this template because of its impact on dev & build performances. To add it, see [this documentation](https://react.dev/learn/react-compiler/installation).
+## Quick start (local)
 
-## Expanding the ESLint configuration
+Requirements: Node 20+, PostgreSQL 14+.
 
-If you are developing a production application, we recommend updating the configuration to enable type-aware lint rules:
-
-```js
-export default defineConfig([
-  globalIgnores(['dist']),
-  {
-    files: ['**/*.{ts,tsx}'],
-    extends: [
-      // Other configs...
-
-      // Remove tseslint.configs.recommended and replace with this
-      tseslint.configs.recommendedTypeChecked,
-      // Alternatively, use this for stricter rules
-      tseslint.configs.strictTypeChecked,
-      // Optionally, add this for stylistic rules
-      tseslint.configs.stylisticTypeChecked,
-
-      // Other configs...
-    ],
-    languageOptions: {
-      parserOptions: {
-        project: ['./tsconfig.node.json', './tsconfig.app.json'],
-        tsconfigRootDir: import.meta.dirname,
-      },
-      // other options...
-    },
-  },
-])
+```bash
+npm install
+cp .env.example .env          # set DATABASE_URL, AUTH_SECRET, SETUP_TOKEN
+npm run db:migrate
+npm run db:seed               # pillars + the 12 launch concepts (no fake subscribers)
+npm run dev                   # http://localhost:3000
 ```
 
-You can also install [eslint-plugin-react-x](https://github.com/Rel1cx/eslint-react/tree/main/packages/plugins/eslint-plugin-react-x) and [eslint-plugin-react-dom](https://github.com/Rel1cx/eslint-react/tree/main/packages/plugins/eslint-plugin-react-dom) for React-specific lint rules:
+Open `http://localhost:3000/studio/setup`, enter your `SETUP_TOKEN`, and create the owner account. Email is in **simulated** mode until you configure a provider, so nothing is ever delivered by accident.
 
-```js
-// eslint.config.js
-import reactX from 'eslint-plugin-react-x'
-import reactDom from 'eslint-plugin-react-dom'
+## Documentation
 
-export default defineConfig([
-  globalIgnores(['dist']),
-  {
-    files: ['**/*.{ts,tsx}'],
-    extends: [
-      // Other configs...
-      // Enable lint rules for React
-      reactX.configs['recommended-typescript'],
-      // Enable lint rules for React DOM
-      reactDom.configs.recommended,
-    ],
-    languageOptions: {
-      parserOptions: {
-        project: ['./tsconfig.node.json', './tsconfig.app.json'],
-        tsconfigRootDir: import.meta.dirname,
-      },
-      // other options...
-    },
-  },
-])
+| Doc | What's in it |
+|---|---|
+| [docs/SETUP.md](docs/SETUP.md) | Environment variables, local development, deployment (Vercel + Postgres), integration setup (Resend, Anthropic, transcription, cron) |
+| [docs/GUIDE.md](docs/GUIDE.md) | Administrator onboarding and the editorial workflow, idea to inbox |
+| [docs/STATUS.md](docs/STATUS.md) | What's working, what's partial, what's planned; tests, acceptance results, known limitations |
+
+## Stack
+
+Next.js 16 (App Router, server actions) · TypeScript · Tailwind CSS 4 · PostgreSQL with Drizzle ORM · Anthropic Claude (`@anthropic-ai/sdk`) · Resend (behind a provider interface) · Vitest · Playwright.
+
 ```
+src/
+  app/(site)/          public pages
+  app/studio/          studio (auth-guarded); (app)/ holds the signed-in layout
+  app/api/             unsubscribe (RFC 8058), webhooks, cron, media, page views
+  actions/             server actions: every one calls requireUser() first
+  lib/                 domain modules: issues, campaigns, subscribers, auth, ...
+  lib/email/           provider interface, Resend + simulated adapters, templates
+  lib/ai/              prompts (editorial rules) + stage orchestration
+  db/schema.ts         the whole data model, documented
+drizzle/               SQL migrations
+tests/                 Vitest suites (real Postgres)
+e2e/acceptance.mjs     20-step browser walkthrough of the acceptance workflow
+```
+
+## Scripts
+
+| Command | |
+|---|---|
+| `npm run dev` / `build` / `start` | Next.js |
+| `npm run check` | lint + typecheck + tests + build |
+| `npm test` | Vitest (needs a `thedash_test` database, or `TEST_DATABASE_URL`) |
+| `npm run db:generate` | create a migration after editing `src/db/schema.ts` |
+| `npm run db:migrate` / `db:seed` | apply migrations / seed pillars and concepts |
+| `npm run admin:create -- --email you@example.com` | create the owner from a terminal |
+| `node e2e/acceptance.mjs` | browser acceptance run against a running server with a fresh DB |

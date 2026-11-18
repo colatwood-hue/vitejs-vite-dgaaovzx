@@ -21,6 +21,7 @@ export default async function Dashboard({ searchParams }: { searchParams: Promis
     db.select({ publishedAt: issues.publishedAt }).from(issues).where(sql`${issues.publishedAt} is not null`).orderBy(desc(issues.publishedAt)).limit(1),
     db.select().from(readerFeedback).where(eq(readerFeedback.followUp, true)).orderBy(desc(readerFeedback.createdAt)).limit(3),
   ]);
+  const [concept001] = await db.select({ id: ideas.id, title: ideas.workingTitle, stage: ideas.stage }).from(ideas).where(eq(ideas.conceptNumber, "001"));
   const remaining = steps.filter((s) => !s.done);
   const counts = Object.fromEntries(stageCounts.map((s) => [s.stage, s.n]));
   const daysSince = lastPub?.publishedAt ? Math.floor((nowMs() - lastPub.publishedAt.getTime()) / 86400_000) : null;
@@ -72,6 +73,13 @@ export default async function Dashboard({ searchParams }: { searchParams: Promis
               Currently writing
             </h2>
             {inProgress.length === 0 ? (
+              concept001 && ["captured", "exploring"].includes(concept001.stage) ? (
+                <Link href={`/studio/ideas/${concept001.id}`} className="card block p-4 hover:bg-paper">
+                  <span className="eyebrow text-bronze">Start here · Concept 001</span>
+                  <span className="mt-1 block font-serif text-xl">{concept001.title}</span>
+                  <span className="mt-1 block text-sm text-muted">An unfinished concept, ready for an interview with your editorial partner.</span>
+                </Link>
+              ) : (
               <p className="text-sm text-muted">
                 Nothing in progress. Pick an idea from the{" "}
                 <Link href="/studio/ideas" className="link">
@@ -79,6 +87,7 @@ export default async function Dashboard({ searchParams }: { searchParams: Promis
                 </Link>
                 .
               </p>
+              )
             ) : (
               <ul className="card divide-y divide-rule">
                 {inProgress.map((i) => (
