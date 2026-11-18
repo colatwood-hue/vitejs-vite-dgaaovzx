@@ -1,0 +1,249 @@
+@import "tailwindcss";
+
+@theme {
+  --color-paper: #f7f3ec;
+  --color-paper-deep: #efe8dc;
+  --color-card: #fffdf9;
+  --color-ink: #1f1c18;
+  --color-ink-soft: #3b362f;
+  --color-muted: #6b6358;
+  --color-rule: #e4dccf;
+  --color-bronze: #7a5c34;
+  --color-bronze-soft: #b89567;
+  --color-moss: #4f5d43;
+  --color-danger: #9b2c2c;
+  --color-warn: #8a5a00;
+  --color-ok: #3f6b3a;
+
+  --font-serif: "Newsreader Variable", "Iowan Old Style", Georgia, "Times New Roman", serif;
+  --font-sans: "Inter Variable", -apple-system, BlinkMacSystemFont, "Segoe UI", Helvetica, Arial, sans-serif;
+}
+
+@layer base {
+  html {
+    -webkit-text-size-adjust: 100%;
+    text-rendering: optimizeLegibility;
+  }
+  body {
+    background: var(--color-paper);
+    color: var(--color-ink);
+    font-family: var(--font-sans);
+  }
+  ::selection {
+    background: #e9d9bd;
+  }
+  :focus-visible {
+    outline: 2px solid var(--color-bronze);
+    outline-offset: 2px;
+  }
+  @media (prefers-reduced-motion: reduce) {
+    * {
+      transition: none !important;
+      animation: none !important;
+    }
+  }
+}
+
+@layer components {
+  .eyebrow {
+    font-family: var(--font-sans);
+    font-size: 0.7rem;
+    letter-spacing: 0.2em;
+    text-transform: uppercase;
+    color: var(--color-muted);
+  }
+  .wordmark {
+    font-family: var(--font-serif);
+    letter-spacing: 0.32em;
+    text-transform: uppercase;
+    font-weight: 500;
+  }
+  .btn {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 0.5rem;
+    min-height: 2.5rem;
+    padding: 0.5rem 1rem;
+    font-size: 0.9rem;
+    font-weight: 500;
+    border: 1px solid var(--color-ink);
+    background: var(--color-ink);
+    color: var(--color-paper);
+    border-radius: 2px;
+    cursor: pointer;
+    transition: background 120ms, color 120ms;
+    white-space: nowrap;
+  }
+  .btn:hover {
+    background: var(--color-ink-soft);
+  }
+  .btn:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+  }
+  .btn-ghost {
+    background: transparent;
+    color: var(--color-ink);
+    border-color: var(--color-rule);
+  }
+  .btn-ghost:hover {
+    background: var(--color-paper-deep);
+  }
+  .btn-danger {
+    background: var(--color-danger);
+    border-color: var(--color-danger);
+    color: #fff;
+  }
+  .btn-sm {
+    min-height: 2rem;
+    padding: 0.25rem 0.65rem;
+    font-size: 0.8rem;
+  }
+  .link {
+    color: var(--color-bronze);
+    text-decoration: underline;
+    text-underline-offset: 3px;
+    text-decoration-thickness: 1px;
+  }
+  .field-label {
+    display: block;
+    font-size: 0.78rem;
+    font-weight: 500;
+    color: var(--color-ink-soft);
+    margin-bottom: 0.3rem;
+  }
+  .field-hint {
+    font-size: 0.75rem;
+    color: var(--color-muted);
+    margin-top: 0.25rem;
+  }
+  .input {
+    width: 100%;
+    background: var(--color-card);
+    border: 1px solid var(--color-rule);
+    border-radius: 2px;
+    padding: 0.55rem 0.7rem;
+    font-size: 1rem; /* ≥16px prevents iOS zoom */
+    color: var(--color-ink);
+  }
+  .input:focus {
+    outline: none;
+    border-color: var(--color-bronze);
+    box-shadow: 0 0 0 1px var(--color-bronze);
+  }
+  textarea.input {
+    line-height: 1.55;
+    resize: vertical;
+  }
+  .card {
+    background: var(--color-card);
+    border: 1px solid var(--color-rule);
+    border-radius: 2px;
+  }
+  .chip {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.3rem;
+    padding: 0.1rem 0.5rem;
+    font-size: 0.72rem;
+    border: 1px solid var(--color-rule);
+    border-radius: 999px;
+    color: var(--color-ink-soft);
+    background: var(--color-card);
+    white-space: nowrap;
+  }
+
+  /* Long-form reading */
+  .prose-dash {
+    font-family: var(--font-serif);
+    font-size: 1.24rem;
+    line-height: 1.7;
+    color: var(--color-ink);
+  }
+  @media (max-width: 640px) {
+    .prose-dash {
+      font-size: 1.14rem;
+    }
+  }
+  .prose-dash > * + * {
+    margin-top: 1.15em;
+  }
+  .prose-dash h2 {
+    font-size: 1.5em;
+    line-height: 1.25;
+    margin-top: 1.8em;
+  }
+  .prose-dash h3 {
+    font-size: 1.2em;
+    font-weight: 600;
+    margin-top: 1.6em;
+  }
+  .prose-dash a {
+    color: var(--color-bronze);
+    text-decoration: underline;
+    text-underline-offset: 3px;
+    text-decoration-thickness: 1px;
+  }
+  .prose-dash blockquote {
+    border-left: 2px solid var(--color-bronze);
+    padding-left: 1.1rem;
+    font-style: italic;
+    color: var(--color-ink-soft);
+  }
+  .prose-dash ul {
+    list-style: disc;
+    padding-left: 1.3rem;
+  }
+  .prose-dash ol {
+    list-style: decimal;
+    padding-left: 1.3rem;
+  }
+  .prose-dash li + li {
+    margin-top: 0.35em;
+  }
+  .prose-dash hr {
+    border: 0;
+    text-align: center;
+    margin: 2.2em 0;
+  }
+  .prose-dash hr::after {
+    content: "—";
+    color: var(--color-bronze-soft);
+  }
+  .prose-dash img {
+    max-width: 100%;
+    height: auto;
+    margin: 1.8em auto;
+  }
+  .prose-dash code {
+    font-size: 0.85em;
+    background: var(--color-paper-deep);
+    padding: 0.1em 0.3em;
+  }
+  .prose-dash strong {
+    font-weight: 600;
+  }
+
+  /* Compact prose for studio panels */
+  .prose-ui {
+    font-size: 0.9rem;
+    line-height: 1.6;
+    color: var(--color-ink-soft);
+  }
+  .prose-ui > * + * {
+    margin-top: 0.7em;
+  }
+  .prose-ui ul {
+    list-style: disc;
+    padding-left: 1.2rem;
+  }
+  .prose-ui ol {
+    list-style: decimal;
+    padding-left: 1.2rem;
+  }
+  .prose-ui strong {
+    color: var(--color-ink);
+    font-weight: 600;
+  }
+}

@@ -191,14 +191,16 @@ async function lockCampaign(id: string, seconds = 120) {
   return row ?? null;
 }
 
-export async function processCampaign(campaignId: string, opts: { timeBudgetMs?: number } = {}) {
+export type CampaignRunResult = { status?: string; skipped?: string; summary?: Record<string, number> };
+
+export async function processCampaign(campaignId: string, opts: { timeBudgetMs?: number } = {}): Promise<CampaignRunResult> {
   const deadline = Date.now() + (opts.timeBudgetMs ?? 45_000);
   const campaign = await lockCampaign(campaignId);
-  if (!campaign) return { skipped: "locked" as const };
+  if (!campaign) return { skipped: "locked" };
   try {
     if (campaign.status === "cancelled" || campaign.status === "sent") return { skipped: campaign.status };
     if (campaign.status === "scheduled") {
-      if (campaign.scheduledFor && campaign.scheduledFor > new Date()) return { skipped: "not_due" as const };
+      if (campaign.scheduledFor && campaign.scheduledFor > new Date()) return { skipped: "not_due" };
       // Recipients are resolved at send time so last-minute unsubscribes are honoured.
       const recipients = await eligibleRecipients(campaign.segmentTags);
       if (recipients.length) {
@@ -265,7 +267,7 @@ export async function processCampaign(campaignId: string, opts: { timeBudgetMs?:
   }
 }
 
-async function finalizeIfDone(campaignId: string) {
+async function finalizeIfDone(campaignId: string): Promise<CampaignRunResult> {
   const counts = await db
     .select({ status: sendEvents.status, attempts: sendEvents.attempts, n: sql<number>`count(*)::int` })
     .from(sendEvents)
@@ -277,7 +279,7 @@ async function finalizeIfDone(campaignId: string) {
       counts.reduce<Record<string, number>>((acc, c) => ((acc[c.status] = (acc[c.status] ?? 0) + c.n), acc), {}),
     ),
   );
-  if (remaining.length) return { status: "sending" as const, summary };
+  if (remaining.length) return { status: "sending", summary };
   const failed = summary.failed ?? 0;
   const delivered = (summary.sent ?? 0) + (summary.simulated ?? 0) + (summary.delivered ?? 0);
   const status = failed === 0 ? "sent" : delivered > 0 ? "partially_failed" : "failed";
