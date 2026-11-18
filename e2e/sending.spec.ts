@@ -12,7 +12,7 @@ function signed(body: string, id: string, ts = Math.floor(Date.now() / 1000)) {
 }
 
 const readers = [unique('alpha'), unique('beta'), unique('gamma')]
-let deliveredTo: Record<string, { id: string; oneClick: string; page: string }> = {}
+const deliveredTo: Record<string, { id: string; oneClick: string; page: string }> = {}
 
 test('send requires a fresh test, publication and a typed confirmation; then each reader gets a personal unsubscribe', async ({ page }) => {
   await login(page)
