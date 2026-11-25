@@ -7,6 +7,8 @@
     "dev": "next dev",
     "build": "next build",
     "start": "next start",
+    "beta": "tsx scripts/beta.ts && next build && next start",
+    "beta:dev": "tsx scripts/beta.ts && next dev",
     "lint": "eslint .",
     "typecheck": "tsc --noEmit",
     "test": "vitest run",

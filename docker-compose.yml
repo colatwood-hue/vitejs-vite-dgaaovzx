@@ -1,0 +1,22 @@
+# Local database for the beta. Start it with:  docker compose up -d
+# Data persists in the "dash-data" volume. `docker compose down -v` deletes it.
+services:
+  db:
+    image: postgres:16-alpine
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: dash
+      POSTGRES_PASSWORD: dash
+      POSTGRES_DB: thedash
+    ports:
+      - "127.0.0.1:5433:5432" # 5433 avoids clashing with a Postgres you may already run
+    volumes:
+      - dash-data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U dash -d thedash"]
+      interval: 2s
+      timeout: 3s
+      retries: 30
+
+volumes:
+  dash-data:
