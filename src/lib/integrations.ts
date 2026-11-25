@@ -100,7 +100,7 @@ export async function onboardingSteps(): Promise<OnboardingStep[]> {
   const [anyIssue] = await db.select({ id: issues.id }).from(issues).orderBy(desc(issues.updatedAt)).limit(1);
   const [anyTest] = await db.select({ id: campaigns.id }).from(campaigns).where(eq(campaigns.kind, "test")).limit(1);
   const [published] = await db.select({ id: issues.id }).from(issues).where(eq(issues.status, "published")).limit(1);
-  const [owner] = await db.select({ name: users.name }).from(users).limit(1);
+  const [owner] = await db.select({ name: users.name, totp: users.totpEnabledAt }).from(users).limit(1);
   return [
     { key: "publication", label: "Name & tagline", done: !!(s.name && s.tagline && s.onboarding.publication), href: "/studio/settings#publication" },
     { key: "profile", label: "Profile & sender information (incl. mailing address)", done: senderComplianceGaps(s).length === 0 && !!owner, href: "/studio/settings#sender" },
@@ -110,6 +110,7 @@ export async function onboardingSteps(): Promise<OnboardingStep[]> {
     { key: "issue", label: "Develop your first issue", done: !!anyIssue, href: "/studio/ideas" },
     { key: "preview", label: "Preview the issue", done: !!anyIssue && !!s.onboarding.previewed, href: anyIssue ? `/studio/issues/${anyIssue.id}` : "/studio/issues" },
     { key: "test", label: "Send a test email", done: !!anyTest, href: anyIssue ? `/studio/issues/${anyIssue.id}` : "/studio/issues" },
+    { key: "twofactor", label: "Turn on two-factor sign-in (recommended)", done: !!owner?.totp, href: "/studio/settings#security" },
     { key: "signup", label: "Review signup & privacy policy", done: s.privacyReviewed, href: "/studio/settings#signup" },
     { key: "publish", label: "Publish after explicit approval", done: !!published, href: anyIssue ? `/studio/issues/${anyIssue.id}` : "/studio/issues" },
   ];

@@ -90,3 +90,25 @@ describe("placeholder guard", () => {
     await expect(approveIssue(i.id)).resolves.toBeTruthy();
   });
 });
+
+import { computeRhythm } from "@/lib/rhythm";
+
+describe("writing rhythm", () => {
+  const now = new Date(2026, 10, 25, 12);
+  const daysAgo = (n: number) => new Date(now.getTime() - n * 86_400_000);
+  it("handles no letters, on track, due soon, due today and overdue", () => {
+    expect(computeRhythm([], 14, now).status).toBe("first_letter");
+    expect(computeRhythm([daysAgo(2)], 14, now)).toMatchObject({ status: "on_track", daysUntil: 12 });
+    expect(computeRhythm([daysAgo(12)], 14, now)).toMatchObject({ status: "due_soon", daysUntil: 2 });
+    expect(computeRhythm([daysAgo(14)], 14, now)).toMatchObject({ status: "due_today", daysUntil: 0 });
+    const late = computeRhythm([daysAgo(20)], 14, now);
+    expect(late).toMatchObject({ status: "overdue", daysUntil: -6 });
+    expect(late.sentence).toContain("6 days ago");
+  });
+  it("measures consistency over recent gaps with a 25% grace", () => {
+    const r = computeRhythm([daysAgo(1), daysAgo(15), daysAgo(32), daysAgo(80)], 14, now);
+    // gaps: 14 (ok), 17 (ok, within 17.5), 48 (late)
+    expect(r.consistency).toBeCloseTo(2 / 3);
+    expect(computeRhythm([daysAgo(1)], 14, now).consistency).toBeNull();
+  });
+});

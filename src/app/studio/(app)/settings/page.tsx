@@ -130,6 +130,28 @@ export default async function Settings({ searchParams }: { searchParams: Promise
         </ActionForm>
       </section>
 
+      <section id="rhythm" className="card p-5" aria-labelledby="rhythm-h">
+        <h2 id="rhythm-h" className="font-serif text-xl">
+          Writing rhythm
+        </h2>
+        <p className="mt-1 text-xs text-muted">How often you&rsquo;d like to send a letter. Only used for gentle reminders on the dashboard. Nothing is ever sent automatically.</p>
+        <ActionForm action={saveSettingsAction} hidden={{ section: "rhythm" }} submitLabel="Save" className="mt-4 flex flex-wrap items-end gap-3">
+          <div>
+            <label htmlFor="cadenceDays" className="field-label">
+              A letter every
+            </label>
+            <select id="cadenceDays" name="cadenceDays" defaultValue={String(s.cadenceDays)} className="input w-40">
+              {[7, 10, 14, 21, 30].includes(s.cadenceDays) ? null : <option value={s.cadenceDays}>{s.cadenceDays} days</option>}
+              <option value="7">week</option>
+              <option value="10">10 days</option>
+              <option value="14">two weeks</option>
+              <option value="21">three weeks</option>
+              <option value="30">month</option>
+            </select>
+          </div>
+        </ActionForm>
+      </section>
+
       <section id="voice" className="card p-5" aria-labelledby="voice-h">
         <h2 id="voice-h" className="font-serif text-xl">
           Voice guidelines

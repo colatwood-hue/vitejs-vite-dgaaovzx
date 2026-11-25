@@ -1,0 +1,1 @@
+ALTER TABLE "publication_settings" ADD COLUMN "cadence_days" integer DEFAULT 14 NOT NULL;

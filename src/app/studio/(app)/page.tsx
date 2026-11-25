@@ -4,6 +4,8 @@ import { db } from "@/db";
 import { nowMs } from "@/lib/time";
 import { campaigns, ideas, issues, readerFeedback, subscribers, thoughts } from "@/db/schema";
 import { onboardingSteps } from "@/lib/integrations";
+import { getSettings } from "@/lib/settings";
+import { computeRhythm } from "@/lib/rhythm";
 import { CaptureForm } from "@/components/studio/CaptureForm";
 import { Badge, PageHeader, STAGES, Stat, SOURCE_LABELS, relTime, stageLabel } from "@/components/studio/ui";
 
@@ -14,20 +16,35 @@ export const metadata = { title: "Dashboard" };
 
 export default async function Dashboard({ searchParams }: { searchParams: Promise<{ welcome?: string }> }) {
   const { welcome } = await searchParams;
-  const [steps, [subs], newThoughts, stageCounts, inProgress, scheduled, [lastPub], followUps] = await Promise.all([
+  const [steps, [subs], newThoughts, stageCounts, inProgress, scheduled, published, followUps, settings] = await Promise.all([
     onboardingSteps(),
     db.select({ n: sql<number>`count(*)::int` }).from(subscribers).where(eq(subscribers.status, "active")),
     db.select().from(thoughts).where(eq(thoughts.status, "new")).orderBy(desc(thoughts.createdAt)).limit(5),
     db.select({ stage: ideas.stage, n: sql<number>`count(*)::int` }).from(ideas).where(isNull(ideas.archivedAt)).groupBy(ideas.stage),
     db.select().from(issues).where(inArray(issues.status, ["draft", "approved"])).orderBy(desc(issues.updatedAt)).limit(4),
     db.select({ c: campaigns, title: issues.title }).from(campaigns).innerJoin(issues, eq(issues.id, campaigns.issueId)).where(and(eq(campaigns.kind, "broadcast"), inArray(campaigns.status, ["scheduled", "sending"]))).orderBy(asc(campaigns.scheduledFor)),
-    db.select({ publishedAt: issues.publishedAt }).from(issues).where(sql`${issues.publishedAt} is not null`).orderBy(desc(issues.publishedAt)).limit(1),
+    db.select({ publishedAt: issues.publishedAt }).from(issues).where(sql`${issues.publishedAt} is not null`).orderBy(desc(issues.publishedAt)).limit(7),
     db.select().from(readerFeedback).where(eq(readerFeedback.followUp, true)).orderBy(desc(readerFeedback.createdAt)).limit(3),
+    getSettings(),
   ]);
   const [concept001] = await db.select({ id: ideas.id, title: ideas.workingTitle, stage: ideas.stage }).from(ideas).where(eq(ideas.conceptNumber, "001"));
   const remaining = steps.filter((s) => !s.done);
   const counts = Object.fromEntries(stageCounts.map((s) => [s.stage, s.n]));
-  const daysSince = lastPub?.publishedAt ? Math.floor((nowMs() - lastPub.publishedAt.getTime()) / 86400_000) : null;
+  const rhythm = computeRhythm(published.map((p) => p.publishedAt!), settings.cadenceDays, new Date(nowMs()));
+  const [publishedCount] = await db.select({ n: sql<number>`count(*)::int` }).from(issues).where(sql`${issues.publishedAt} is not null`);
+  const [readyIdea] = await db
+    .select({ id: ideas.id, title: ideas.workingTitle })
+    .from(ideas)
+    .where(and(eq(ideas.stage, "ready_to_draft"), isNull(ideas.archivedAt)))
+    .orderBy(sql`${ideas.targetDate} asc nulls last`, desc(ideas.updatedAt))
+    .limit(1);
+  const nextStep = inProgress[0]
+    ? { href: `/studio/issues/${inProgress[0].id}`, label: `Keep going: ${inProgress[0].title}` }
+    : readyIdea
+      ? { href: `/studio/ideas/${readyIdea.id}`, label: `Ready to draft: ${readyIdea.title}` }
+      : concept001 && ["captured", "exploring"].includes(concept001.stage)
+        ? { href: `/studio/ideas/${concept001.id}`, label: `Start with concept 001` }
+        : { href: "/studio/ideas", label: "Pick an idea to explore" };
 
   return (
     <div className="mx-auto max-w-6xl">
@@ -136,9 +153,25 @@ export default async function Dashboard({ searchParams }: { searchParams: Promis
         </div>
 
         <div className="space-y-6">
+          <section className={`card p-4 ${rhythm.status === "overdue" ? "border-warn/40" : ""}`} aria-labelledby="rhythm">
+            <div className="flex items-baseline justify-between">
+              <h2 id="rhythm" className="eyebrow">
+                Writing rhythm
+              </h2>
+              <Link href="/studio/settings#rhythm" className="text-xs text-muted hover:text-ink">
+                every {settings.cadenceDays} days
+              </Link>
+            </div>
+            <p className={`mt-2 font-serif text-lg leading-snug ${rhythm.status === "overdue" ? "text-warn" : ""}`}>{rhythm.sentence}</p>
+            {rhythm.consistency !== null && <p className="mt-1 text-xs text-muted">{Math.round(rhythm.consistency * 100)}% of recent letters arrived on rhythm.</p>}
+            <Link href={nextStep.href} className="link mt-3 inline-block text-sm">
+              {nextStep.label} →
+            </Link>
+          </section>
+
           <div className="grid grid-cols-2 gap-3">
             <Stat label="Active subscribers" value={subs.n} />
-            <Stat label="Days since last letter" value={daysSince ?? "—"} />
+            <Stat label="Letters published" value={publishedCount.n} />
           </div>
 
           <section className="card p-4" aria-labelledby="pipeline">

@@ -5,7 +5,7 @@
 This repository holds both halves of the publication:
 
 - **The public site:** home, archive (by date and theme), issue pages with SEO metadata, About, Subscribe (double opt-in), email preferences, one-click unsubscribe, privacy & contact, and RSS.
-- **The private editorial studio** (`/studio`): Thought Inbox (text, voice, audio upload, transcription), Idea Library & pipeline, AI editorial partner, issue editor, publishing, subscribers & consent, analytics & feedback, repurposing, and settings.
+- **The private editorial studio** (`/studio`): Thought Inbox (text, voice, audio upload, background transcription), full-text search, Idea Library & pipeline, AI editorial partner, issue editor, publishing, subscribers & consent, analytics & feedback, repurposing, writing rhythm, and settings with two-factor sign-in.
 
 > The software should never become more complicated than writing the newsletter itself.
 
@@ -33,7 +33,7 @@ Open `http://localhost:3000/studio/setup`, enter your `SETUP_TOKEN`, and create 
 
 ## Stack
 
-Next.js 16 (App Router, server actions) · TypeScript · Tailwind CSS 4 · PostgreSQL with Drizzle ORM · Anthropic Claude (`@anthropic-ai/sdk`) · Resend (behind a provider interface) · Vitest · Playwright.
+Next.js 16 (App Router, server actions) · TypeScript · Tailwind CSS 4 · PostgreSQL with Drizzle ORM (incl. full-text search) · Anthropic Claude (`@anthropic-ai/sdk`) · Resend (behind a provider interface) · optional S3-compatible storage · Vitest · Playwright.
 
 ```
 src/
@@ -47,7 +47,7 @@ src/
   db/schema.ts         the whole data model, documented
 drizzle/               SQL migrations
 tests/                 Vitest suites (real Postgres)
-e2e/acceptance.mjs     20-step browser walkthrough of the acceptance workflow
+e2e/acceptance.mjs     22-step browser walkthrough of the acceptance workflow
 ```
 
 ## Scripts

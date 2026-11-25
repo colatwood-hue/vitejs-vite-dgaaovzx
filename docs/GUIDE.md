@@ -2,7 +2,7 @@
 
 ## First run (about 15 minutes)
 
-The dashboard shows a 10-step checklist. Each step links to where it's done and shows whether an integration is **configured**, **unconfigured**, **optional** or **failed**.
+The dashboard shows an 11-step checklist. Each step links to where it's done and shows whether an integration is **configured**, **unconfigured**, **optional** or **failed**.
 
 1. **Name & tagline:** Settings → Publication & profile. Save once to confirm.
 2. **Profile & sender:** From name, From address, reply-to, contact email, and a **mailing address** (CASL requires one in every email; a PO box works).
@@ -13,7 +13,10 @@ The dashboard shows a 10-step checklist. Each step links to where it's done and 
 7. **Preview** it (Web / Email desktop / Email mobile tabs in the editor).
 8. **Send a test email** to yourself.
 9. **Review signup & privacy:** the privacy policy is a template. Read it, edit it, tick "reviewed".
-10. **Publish after explicit approval.**
+10. **Turn on two-factor sign-in** (Settings → Security). Recommended: the studio holds private journal entries.
+11. **Publish after explicit approval.**
+
+Also in Settings: your **writing rhythm** (a letter every week, two weeks, month…). The dashboard shows when the next letter is due, how consistent recent letters have been, and the most useful next step. Nothing is ever sent automatically.
 
 ## The editorial workflow
 
@@ -21,8 +24,13 @@ The dashboard shows a 10-step checklist. Each step links to where it's done and 
 From any studio page, tap **+ Capture**. Type, pick a type (note, journal, story, question, quote, link…), or **Record voice note**. It's saved privately. Voice notes are kept exactly as recorded and transcribed if a provider is set up.
 
 - **Originals are never modified.** Transcripts and AI analysis are stored separately and are editable.
+- Voice notes save instantly; **transcription runs in the background** and the page updates on its own when it's done.
+- The thought page suggests **ideas it might belong with** (by shared words), each one click to link.
 - Mark anything **Sensitive** and it will never be sent to the AI.
 - **Analyse this thought** asks the AI for the central idea, underlying belief, potential contradiction, personal relevance, an angle, related ideas and questions. All of it is editable.
+
+### Search
+The search box in the sidebar (or **Search** on mobile) looks through every note, transcript, idea and issue. It understands word forms ("postponed" finds "postponing"), `"exact phrases"`, and `-excluded` words, and still finds partial words.
 
 ### 2. Shape (Ideas & Pipeline)
 **Turn into an idea** from a thought, or add one directly. Stages: Captured → Exploring → Ready to draft → Drafting → Editing → Scheduled → Published. The pipeline board lets you move cards; the list view filters by pillar, stage and date. Ideas can be **connected**, **merged** (notes appended, original archived; reopenable) and **archived**.

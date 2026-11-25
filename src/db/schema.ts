@@ -579,6 +579,8 @@ export const publicationSettings = pgTable("publication_settings", {
   doubleOptIn: boolean("double_opt_in").notNull().default(true),
   signupEnabled: boolean("signup_enabled").notNull().default(true),
   voiceGuidelines: text("voice_guidelines").notNull().default(""),
+  /** Intended days between letters; drives the dashboard rhythm card. */
+  cadenceDays: integer("cadence_days").notNull().default(14),
   privacyPolicyMd: text("privacy_policy_md").notNull().default(""),
   privacyReviewed: boolean("privacy_reviewed").notNull().default(false),
   onboarding: jsonb("onboarding").$type<Record<string, boolean>>().notNull().default({}),

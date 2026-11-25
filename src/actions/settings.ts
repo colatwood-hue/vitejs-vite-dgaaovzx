@@ -36,6 +36,7 @@ const sections = {
     privacyReviewed: z.string().optional().transform((v) => v === "on"),
   }),
   voice: z.object({ voiceGuidelines: str(20_000) }),
+  rhythm: z.object({ cadenceDays: z.coerce.number().int().min(3, "At least 3 days.").max(90, "At most 90 days.") }),
 };
 
 export async function saveSettingsAction(_prev: FormState, form: FormData): Promise<FormState> {

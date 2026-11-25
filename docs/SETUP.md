@@ -20,6 +20,8 @@ All secrets are environment variables, never stored in the database. Copy `.env.
 | `OPENAI_API_KEY` / `OPENAI_TRANSCRIPTION_MODEL` | if openai | Whisper-compatible transcription (`whisper-1` default) |
 | `DEEPGRAM_API_KEY` | if deepgram | Deepgram transcription |
 | `CRON_SECRET` | for scheduling | Bearer token for `/api/cron/dispatch` |
+| `STORAGE_PROVIDER` | optional | `db` (default) or `s3` for voice notes and images |
+| `S3_BUCKET`, `S3_REGION`, `S3_ENDPOINT`, `S3_ACCESS_KEY_ID`, `S3_SECRET_ACCESS_KEY`, `S3_FORCE_PATH_STYLE` | if s3 | Any S3-compatible bucket (AWS S3, Cloudflare R2, Backblaze B2, MinIO) |
 
 ## 2. Local development
 
@@ -53,7 +55,7 @@ node e2e/acceptance.mjs                      # screenshots land in e2e/screensho
 
 Other hosts (Railway, Render, Fly, a VPS) work too: `npm run build && npm start`, plus any scheduler hitting the cron URL.
 
-**Storage note:** voice notes and issue images are stored in Postgres (`bytea`). That is simplest and fine for a personal newsletter. Server actions accept up to 25 MB, but **Vercel limits request bodies to about 4.5 MB**. A 3-minute Opus/WebM voice note from the in-browser recorder is typically under 1 MB, but long uploaded WAV files may exceed this on Vercel. See STATUS.md (object storage is a planned upgrade).
+**Storage note:** by default voice notes and issue images are stored in Postgres (`bytea`). That is simplest, and a 3-minute voice note from the in-browser recorder is usually under 1 MB. But **Vercel caps request bodies at about 4.5 MB**, so long uploaded recordings (e.g. WAV files) need object storage. See §6b.
 
 ## 4. Email: Resend
 
@@ -80,7 +82,25 @@ Create a key at console.anthropic.com → `ANTHROPIC_API_KEY`. Studio → Settin
 
 Without a provider, recordings are still saved and marked "Not transcribed". Transcribe later from the thought page.
 
+## 6b. Object storage (recommended on Vercel)
+
+With `STORAGE_PROVIDER=s3`, the browser uploads files **directly to your bucket** using 10-minute presigned URLs, so file size isn't limited by the app server (audio up to 100 MB, images up to 10 MB). The server then checks each upload (size and type via `HEAD`) before registering it. Voice notes are played back through 5-minute signed links, so **keep the bucket private**. Issue images are served through `/api/assets/…` and cached permanently, so links in sent emails never expire.
+
+Cloudflare R2 example (no egress fees):
+1. R2 → Create bucket `the-dash`. Leave public access **off**.
+2. R2 → Manage API tokens → *Object Read & Write* for that bucket. Copy the key ID and secret.
+3. Set `STORAGE_PROVIDER=s3`, `S3_BUCKET=the-dash`, `S3_REGION=auto`, `S3_ENDPOINT=https://<account-id>.r2.cloudflarestorage.com`, and the two keys.
+4. Bucket → Settings → CORS policy:
+   ```json
+   [{ "AllowedOrigins": ["https://your-domain"], "AllowedMethods": ["PUT", "GET"], "AllowedHeaders": ["content-type"], "MaxAgeSeconds": 3600 }]
+   ```
+5. Settings → Integrations should show *File storage: configured*. Record a voice note to confirm.
+
+AWS S3 works the same way (leave `S3_ENDPOINT` empty and set the real region). For MinIO, set `S3_FORCE_PATH_STYLE=true`. Existing database-stored files keep working after you switch; only new uploads go to the bucket.
+
 ## 7. Security notes
+
+- **Turn on two-factor sign-in** (Settings → Security). It works with any authenticator app (TOTP). You get 8 single-use recovery codes; store them in your password manager. Secrets are encrypted at rest with a key derived from `AUTH_SECRET`, **so rotating `AUTH_SECRET` disables existing two-factor setups** (sign in with a recovery code, then set it up again). If you lose both phone and recovery codes, clear the `totp_*` columns for your user in the database.
 
 - Single owner account; scrypt password hashing; opaque session tokens stored hashed; httpOnly SameSite=Lax cookies; login rate-limited (Postgres-backed, works on serverless).
 - Every server action calls `requireUser()`; studio pages, audio, exports and previews return 404/redirect when signed out.
