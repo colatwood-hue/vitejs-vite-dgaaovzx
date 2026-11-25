@@ -12,6 +12,7 @@ import { db } from "@/db";
 import { aiMessages, aiSessions, ideaThoughts, ideas, issues, pillars, thoughts, type ThoughtAnalysis } from "@/db/schema";
 import { createIssueFromIdea, saveIssue, snapshot } from "@/lib/issues";
 import { getSettings } from "@/lib/settings";
+import { relatedIdeas } from "@/lib/search";
 import { plainText, structured } from "./client";
 import { REPURPOSE_FORMATS, STAGE_INSTRUCTIONS } from "./prompts";
 
@@ -106,12 +107,15 @@ export async function analyzeThought(thoughtId: string): Promise<ThoughtAnalysis
   if (!t) throw new Error("Thought not found");
   if (t.privacy === "sensitive") throw new Error("This thought is marked sensitive and won't be sent to the AI provider.");
   const settings = await getSettings();
-  const existing = await db
+  // Lexically related ideas first, then recent ones, so the AI sees likely matches.
+  const related = await relatedIdeas([t.title, t.originalContent, t.transcription].filter(Boolean).join(" "), { limit: 15 });
+  const recent = await db
     .select({ title: ideas.workingTitle })
     .from(ideas)
     .where(ne(ideas.stage, "published"))
     .orderBy(desc(ideas.updatedAt))
-    .limit(60);
+    .limit(40);
+  const existing = [...new Map([...related, ...recent].map((x) => [x.title, x])).values()];
   const material = [
     `## Captured thought (Col's own words, source: ${t.sourceType})`,
     t.title ? `Title: ${t.title}` : "",

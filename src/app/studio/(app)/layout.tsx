@@ -27,7 +27,13 @@ export default async function StudioLayout({ children }: { children: React.React
           <Link href="/studio/inbox#capture" className="btn mx-3 mt-6">
             + Capture a thought
           </Link>
-          <div className="mt-6 flex-1">
+          <form action="/studio/search" role="search" className="mx-3 mt-4">
+            <label htmlFor="studio-search" className="sr-only">
+              Search everything
+            </label>
+            <input id="studio-search" name="q" placeholder="Search everything…" className="input py-1.5 text-sm" />
+          </form>
+          <div className="mt-5 flex-1">
             <StudioSidebar />
           </div>
           <div className="space-y-2 px-3 text-xs text-muted">
@@ -43,9 +49,14 @@ export default async function StudioLayout({ children }: { children: React.React
         <div className="min-w-0 flex-1 px-4 pb-28 pt-6 sm:px-8 md:pb-16">
           <div className="mb-4 flex items-center justify-between md:hidden">
             <span className="wordmark text-xs">The Dash · Studio</span>
-            <Link href="/studio/inbox#capture" className="btn btn-sm">
-              + Capture
-            </Link>
+            <span className="flex gap-2">
+              <Link href="/studio/search" className="btn btn-ghost btn-sm" aria-label="Search">
+                Search
+              </Link>
+              <Link href="/studio/inbox#capture" className="btn btn-sm">
+                + Capture
+              </Link>
+            </span>
           </div>
           {children}
         </div>

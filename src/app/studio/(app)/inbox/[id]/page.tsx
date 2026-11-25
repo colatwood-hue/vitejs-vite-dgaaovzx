@@ -17,6 +17,7 @@ import {
 import { ActionForm } from "@/components/studio/ActionForm";
 import { AutoRefresh } from "@/components/studio/AutoRefresh";
 import { nowMs } from "@/lib/time";
+import { relatedIdeas } from "@/lib/search";
 import { Badge, PageHeader, SOURCE_LABELS, stageLabel } from "@/components/studio/ui";
 
 // Background transcription (after()) runs within this budget.
@@ -34,6 +35,10 @@ export default async function ThoughtDetail({ params }: { params: Promise<{ id: 
     db.select({ id: ideas.id, title: ideas.workingTitle }).from(ideas).where(isNull(ideas.archivedAt)).orderBy(desc(ideas.updatedAt)).limit(100),
   ]);
   const selectedIds = new Set(selected.map((s) => s.pillarId));
+  const suggestions = await relatedIdeas([t.title, t.originalContent, t.transcription].filter(Boolean).join(" "), {
+    excludeIds: linked.map((l) => l.id),
+    limit: 4,
+  });
   const a = t.aiAnalysis;
   const ai = aiConfigured();
   const tx = transcriptionConfigured();
@@ -232,6 +237,22 @@ export default async function ThoughtDetail({ params }: { params: Promise<{ id: 
               </ul>
             ) : (
               <p className="mt-2 text-sm text-muted">Not linked to any idea yet.</p>
+            )}
+            {suggestions.length > 0 && (
+              <div className="mt-4">
+                <p className="field-label">Might belong with</p>
+                <ul className="space-y-1.5 text-sm">
+                  {suggestions.map((sg) => (
+                    <li key={sg.id} className="flex items-center justify-between gap-2">
+                      <Link href={`/studio/ideas/${sg.id}`} className="hover:text-bronze">
+                        {sg.title}
+                      </Link>
+                      <ActionForm action={linkThoughtToIdeaAction} hidden={{ id: t.id, ideaId: sg.id }} submitLabel="Link" buttonClassName="text-xs text-bronze underline" />
+                    </li>
+                  ))}
+                </ul>
+                <p className="field-hint">Suggested by shared words, not meaning.</p>
+              </div>
             )}
             <ActionForm action={linkThoughtToIdeaAction} hidden={{ id: t.id }} submitLabel="Link" buttonClassName="btn btn-ghost btn-sm" className="mt-4 space-y-2">
               <label className="field-label" htmlFor="ideaId">
