@@ -21,14 +21,17 @@ export function emailConfig() {
   return { from, owner, replyTo: owner }
 }
 
-function transport(): 'log' | 'resend' {
+function transport(): 'log' | 'resend' | null {
   const explicit = process.env.EMAIL_TRANSPORT
   if (explicit === 'log' || explicit === 'resend') return explicit
   if (process.env.RESEND_API_KEY) return 'resend'
-  // Never silently "send" to a log file in production.
-  if (process.env.NODE_ENV === 'production') throw new Error('Email is not configured: set RESEND_API_KEY (or EMAIL_TRANSPORT=log explicitly)')
+  // Never silently "send" to a log file in production: email is simply off until Resend is set up.
+  if (process.env.NODE_ENV === 'production') return null
   return 'log'
 }
+
+/** False in production until RESEND_API_KEY is set. Public signup is hidden while this is false. */
+export const emailConfigured = () => transport() !== null
 
 /** Development/test transport: one JSON line per email, nothing leaves the machine. */
 async function sendLog(batch: OutgoingEmail[]): Promise<SendResult> {
@@ -76,5 +79,7 @@ async function sendResend(batch: OutgoingEmail[], idempotencyKey?: string): Prom
 export async function sendEmails(batch: OutgoingEmail[], idempotencyKey?: string): Promise<SendResult> {
   if (batch.length === 0) return { ok: true, ids: [] }
   if (batch.length > RESEND_BATCH_LIMIT) throw new Error(`Batch too large (${batch.length})`)
-  return transport() === 'log' ? sendLog(batch) : sendResend(batch, idempotencyKey)
+  const t = transport()
+  if (!t) return { ok: false, error: 'Email is not set up yet: add RESEND_API_KEY and EMAIL_FROM.' }
+  return t === 'log' ? sendLog(batch) : sendResend(batch, idempotencyKey)
 }

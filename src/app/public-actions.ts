@@ -1,6 +1,7 @@
 'use server'
 
 import { z } from 'zod'
+import { emailConfigured } from '@/lib/mailer'
 import { clientIp, rateLimit } from '@/lib/rate-limit'
 import { confirmSubscription, requestSubscription, unsubscribe } from '@/lib/subscribers'
 import { verifyUnsubscribeToken } from '@/lib/tokens'
@@ -15,6 +16,7 @@ const signup = z.object({
 
 export async function subscribe(_: PublicState, form: FormData): Promise<PublicState> {
   const raw = { email: String(form.get('email') ?? ''), name: String(form.get('name') ?? ''), website: String(form.get('website') ?? '') }
+  if (!emailConfigured()) return { error: 'Subscriptions are not open yet.' }
   if (raw.website) return { ok: true } // bot: pretend success
   const parsed = signup.safeParse(raw)
   if (!parsed.success) return { error: parsed.error.issues[0]?.message ?? 'Invalid input' }

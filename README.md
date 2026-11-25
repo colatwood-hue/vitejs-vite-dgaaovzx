@@ -2,6 +2,7 @@
 
 Col's newsletter studio: capture raw observations, develop them into letters, approve, and publish. Built with Next.js 16, Tailwind v4, Postgres/Supabase, Tiptap and React Email.
 
+- **Start here:** [`docs/GETTING-STARTED.md`](docs/GETTING-STARTED.md)
 - **Plan and status:** [`docs/PLAN.md`](docs/PLAN.md)
 - **Architecture and rules:** [`CLAUDE.md`](CLAUDE.md)
 - **Editorial method:** [`.claude/skills/dash-editorial-system/SKILL.md`](.claude/skills/dash-editorial-system/SKILL.md)
