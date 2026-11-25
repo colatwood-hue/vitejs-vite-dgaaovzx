@@ -25,7 +25,7 @@ beforeAll(async () => {
   const { sql } = await import("drizzle-orm");
   await migrate(db, { migrationsFolder: "./drizzle" });
   await db.execute(sql`
-    truncate users, sessions, rate_limits, pillars, audio_assets, thoughts, thought_pillars, ideas,
+    truncate users, sessions, login_challenges, rate_limits, pillars, audio_assets, thoughts, thought_pillars, ideas,
       idea_thoughts, idea_links, ai_sessions, ai_messages, issues, issue_revisions, issue_assets,
       subscribers, consent_records, subscriber_preferences, suppressions, campaigns, send_events,
       engagement_events, reader_feedback, repurposed_content, page_views, publication_settings,

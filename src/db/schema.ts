@@ -116,6 +116,24 @@ export const users = pgTable("users", {
   email: text("email").notNull().unique(),
   name: text("name").notNull().default(""),
   passwordHash: text("password_hash").notNull(),
+  /** TOTP secret, AES-256-GCM encrypted with a key derived from AUTH_SECRET. */
+  totpSecretEnc: text("totp_secret_enc"),
+  totpEnabledAt: timestamp("totp_enabled_at", { withTimezone: true }),
+  /** Last accepted 30-second time step (prevents code replay). */
+  totpLastStep: integer("totp_last_step"),
+  /** sha256 hashes of single-use recovery codes. */
+  recoveryCodeHashes: text("recovery_code_hashes").array().notNull().default(sql`'{}'::text[]`),
+  createdAt: createdAt(),
+});
+
+/** Password accepted, second factor pending. Short-lived. */
+export const loginChallenges = pgTable("login_challenges", {
+  id: text("id").primaryKey(), // sha256 of the cookie token
+  userId: uuid("user_id")
+    .notNull()
+    .references(() => users.id, { onDelete: "cascade" }),
+  attempts: integer("attempts").notNull().default(0),
+  expiresAt: timestamp("expires_at", { withTimezone: true }).notNull(),
   createdAt: createdAt(),
 });
 

@@ -1,9 +1,9 @@
 "use server";
 
-import { headers } from "next/headers";
+import { cookies, headers } from "next/headers";
 import { redirect } from "next/navigation";
 import { z } from "zod";
-import { authenticate, createSession, createUser, hasAnyUser, logout, setSessionCookie } from "@/lib/auth";
+import { MFA_COOKIE, authenticate, beginLogin, completeChallenge, createSession, createUser, hasAnyUser, logout, setSessionCookie } from "@/lib/auth";
 import { safeEqual } from "@/lib/crypto";
 import { env } from "@/lib/env";
 import { rateLimit } from "@/lib/rate-limit";
@@ -22,9 +22,30 @@ export async function loginAction(_prev: FormState, form: FormData): Promise<For
   }
   const user = await authenticate(email, password);
   if (!user) return { ok: false, message: "That email and password don't match." };
-  const { token, expiresAt } = await createSession(user.id);
-  await setSessionCookie(token, expiresAt);
+  const next = await beginLogin(user.id);
+  if (next.kind === "challenge") {
+    (await cookies()).set(MFA_COOKIE, next.token, {
+      httpOnly: true,
+      secure: process.env.NODE_ENV === "production",
+      sameSite: "lax",
+      path: "/studio",
+      expires: next.expiresAt,
+    });
+    redirect("/studio/login/verify");
+  }
+  await setSessionCookie(next.token, next.expiresAt);
   redirect("/studio");
+}
+
+export async function verifyCodeAction(_prev: FormState, form: FormData): Promise<FormState> {
+  if (!(await rateLimit(`mfa:ip:${await ip()}`, 20, 900))) return { ok: false, message: "Too many attempts. Wait 15 minutes." };
+  const jar = await cookies();
+  const result = await completeChallenge(jar.get(MFA_COOKIE)?.value, String(form.get("code") ?? ""));
+  if (!result.ok) return { ok: false, message: result.reason };
+  jar.delete({ name: MFA_COOKIE, path: "/studio" });
+  const { token, expiresAt } = await createSession(result.userId);
+  await setSessionCookie(token, expiresAt);
+  redirect(result.usedRecovery ? "/studio/settings?recovery=used#security" : "/studio");
 }
 
 const setupSchema = z.object({

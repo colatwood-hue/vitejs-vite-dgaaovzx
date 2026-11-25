@@ -12,6 +12,24 @@ import { createRequire } from "node:module";
 const { chromium, devices } = createRequire(import.meta.url)("playwright");
 import { mkdirSync, writeFileSync } from "node:fs";
 import path from "node:path";
+import { createHmac } from "node:crypto";
+
+/** Minimal RFC 6238 TOTP, so the walkthrough can act as the authenticator app. */
+function totp(secretB32, offsetSteps = 0) {
+  const A = "ABCDEFGHIJKLMNOPQRSTUVWXYZ234567";
+  let bits = 0, value = 0;
+  const bytes = [];
+  for (const ch of secretB32.replace(/\s/g, "")) {
+    value = (value << 5) | A.indexOf(ch);
+    bits += 5;
+    if (bits >= 8) { bytes.push((value >>> (bits - 8)) & 255); bits -= 8; }
+  }
+  const counter = Buffer.alloc(8);
+  counter.writeBigUInt64BE(BigInt(Math.floor(Date.now() / 30000) + offsetSteps));
+  const mac = createHmac("sha1", Buffer.from(bytes)).update(counter).digest();
+  const o = mac[mac.length - 1] & 0xf;
+  return String((mac.readUInt32BE(o) & 0x7fffffff) % 1_000_000).padStart(6, "0");
+}
 
 const BASE = process.env.BASE_URL ?? "http://localhost:3000";
 const TOKEN = process.env.SETUP_TOKEN ?? "local-setup-token";
@@ -82,6 +100,27 @@ try {
     await page.fill("#mailingAddress", "PO Box 123\nToronto ON M5V 1A1\nCanada");
     await page.locator("#sender").getByRole("button", { name: "Save" }).click();
     await page.locator("#sender").getByText("Saved.").waitFor();
+  });
+
+  await step("2b. Turn on two-factor sign-in, then sign in with password + code", async () => {
+    await page.goto(`${BASE}/studio/settings#security`);
+    await page.click("text=Set up two-factor");
+    const secret = (await page.locator("p.font-mono").first().textContent()).replace(/\s/g, "");
+    await page.fill("#enrol-code", totp(secret));
+    await page.click("role=button[name='Turn on']");
+    await page.getByText("Save these recovery codes now.").waitFor();
+    await page.click("text=Sign out");
+    await page.waitForURL(/\/studio\/login/);
+    await page.fill("#email", "col@example.com");
+    await page.fill("#password", "a-very-long-passphrase");
+    await page.click("role=button[name='Sign in']");
+    await page.waitForURL(/\/studio\/login\/verify/);
+    await page.fill("#code", "000000");
+    await page.click("role=button[name='Verify']");
+    await page.getByText(/didn.t match/).waitFor();
+    await page.fill("#code", totp(secret, 1)); // next step: the enrolment code can't be replayed
+    await page.click("role=button[name='Verify']");
+    await page.waitForURL(`${BASE}/studio`);
   });
 
   await step("3. Capture a text thought in under 30 seconds", async () => {
@@ -199,6 +238,12 @@ try {
     await page.click("text=Log it");
     await page.getByText("Logged.").waitFor();
     await page.screenshot({ path: `${OUT}/04-analytics.png`, fullPage: true });
+  });
+
+  await step("15b. Search finds notes, ideas and issues (stemmed, highlighted)", async () => {
+    await page.goto(`${BASE}/studio/search?q=postponing`);
+    await page.locator("mark").first().waitFor();
+    await page.getByText("Issue", { exact: true }).first().waitFor();
   });
 
   await step("16. Save a LinkedIn derivative linked to the issue (manual; AI optional)", async () => {

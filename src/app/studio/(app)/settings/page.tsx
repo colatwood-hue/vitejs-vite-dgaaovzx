@@ -1,4 +1,9 @@
+import { eq } from "drizzle-orm";
+import { db } from "@/db";
+import { users } from "@/db/schema";
+import { requireUser } from "@/lib/auth";
 import { getSettings } from "@/lib/settings";
+import { SecurityPanel } from "@/components/studio/SecurityPanel";
 import { integrationHealth } from "@/lib/integrations";
 import { saveSettingsAction, testAiAction, testEmailProviderAction } from "@/actions/settings";
 import { PRIVACY_TEMPLATE } from "@/lib/privacy-template";
@@ -11,8 +16,14 @@ export const metadata = { title: "Settings" };
 
 const TONE = { ok: "ok", configured: "ok", unconfigured: "warn", failed: "danger", optional: "neutral" } as const;
 
-export default async function Settings() {
-  const [s, health] = await Promise.all([getSettings(), integrationHealth()]);
+export default async function Settings({ searchParams }: { searchParams: Promise<{ recovery?: string }> }) {
+  const { recovery } = await searchParams;
+  const user = await requireUser();
+  const [s, health, [sec]] = await Promise.all([
+    getSettings(),
+    integrationHealth(),
+    db.select({ on: users.totpEnabledAt, codes: users.recoveryCodeHashes }).from(users).where(eq(users.id, user.id)),
+  ]);
   const text = (name: keyof typeof s, label: string, opts: { type?: string; hint?: string; rows?: number; placeholder?: string } = {}) => (
     <div>
       <label htmlFor={name} className="field-label">
@@ -51,6 +62,13 @@ export default async function Settings() {
           <ActionForm action={testEmailProviderAction} submitLabel="Send connection test email" pendingLabel="Sending…" buttonClassName="btn btn-ghost btn-sm" />
           {aiConfigured() && <ActionForm action={testAiAction} submitLabel="Test AI connection" pendingLabel="Testing…" buttonClassName="btn btn-ghost btn-sm" />}
         </div>
+      </section>
+
+      <section id="security" className="card p-5" aria-labelledby="sec-h">
+        <h2 id="sec-h" className="font-serif text-xl">
+          Security
+        </h2>
+        <SecurityPanel totpEnabled={!!sec?.on} recoveryLeft={sec?.codes.length ?? 0} recoveryJustUsed={recovery === "used"} />
       </section>
 
       <section id="publication" className="card p-5" aria-labelledby="pub-h">
