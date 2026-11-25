@@ -15,7 +15,12 @@ import {
   updateThoughtAction,
 } from "@/actions/thoughts";
 import { ActionForm } from "@/components/studio/ActionForm";
+import { AutoRefresh } from "@/components/studio/AutoRefresh";
+import { nowMs } from "@/lib/time";
 import { Badge, PageHeader, SOURCE_LABELS, stageLabel } from "@/components/studio/ui";
+
+// Background transcription (after()) runs within this budget.
+export const maxDuration = 300;
 
 export default async function ThoughtDetail({ params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;
@@ -79,6 +84,14 @@ export default async function ThoughtDetail({ params }: { params: Promise<{ id: 
                 <h2 className="eyebrow">Transcript</h2>
                 <Badge tone={t.transcriptionStatus === "completed" ? "ok" : t.transcriptionStatus === "failed" ? "danger" : "warn"}>{t.transcriptionStatus}</Badge>
               </div>
+              {t.transcriptionStatus === "pending" &&
+                (nowMs() - t.updatedAt.getTime() < 5 * 60_000 ? (
+                  <p className="mt-2 text-sm text-muted" role="status">
+                    <AutoRefresh /> Transcribing… this page updates on its own.
+                  </p>
+                ) : (
+                  <p className="mt-2 text-sm text-warn">Transcription seems stuck. Try again below.</p>
+                ))}
               {t.transcriptionError && <p className="mt-2 text-sm text-danger">{t.transcriptionError}</p>}
               {t.transcription ? (
                 <p className="mt-3 whitespace-pre-wrap font-serif text-lg leading-relaxed text-ink-soft">{t.transcription}</p>

@@ -2,6 +2,7 @@
 
 import { useCallback, useEffect, useRef, useState } from "react";
 import { saveIssueAction, uploadImageAction, type SaveResult } from "@/actions/issues";
+import { attachUpload } from "./upload";
 
 type Pillar = { id: number; name: string };
 
@@ -125,8 +126,13 @@ export function IssueEditor({ issue, pillars }: { issue: EditorIssue; pillars: P
     const alt = window.prompt("Describe the image for readers who can't see it (alt text):", "") ?? "";
     const fd = new FormData();
     fd.set("id", f.id);
-    fd.set("file", file);
     fd.set("alt", alt);
+    try {
+      await attachUpload(fd, "image", file, "file", "key");
+    } catch (err) {
+      setNotice((err as Error).message);
+      return;
+    }
     const r = await uploadImageAction(fd);
     if (!r.ok || !r.markdown) {
       setNotice(r.message ?? "Upload failed.");

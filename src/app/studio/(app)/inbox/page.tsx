@@ -3,7 +3,11 @@ import { and, desc, eq, ilike, ne, or, type SQL } from "drizzle-orm";
 import { db } from "@/db";
 import { thoughts } from "@/db/schema";
 import { CaptureForm } from "@/components/studio/CaptureForm";
+import { AutoRefresh } from "@/components/studio/AutoRefresh";
 import { Badge, Empty, PageHeader, SOURCE_LABELS, relTime } from "@/components/studio/ui";
+
+// Background transcription (after()) runs within this budget.
+export const maxDuration = 300;
 
 export const metadata = { title: "Thought Inbox" };
 
@@ -78,6 +82,7 @@ export default async function Inbox({ searchParams }: { searchParams: Promise<{ 
       </form>
 
       <div className="mt-6">
+        {rows.some((r) => r.transcriptionStatus === "pending") && <AutoRefresh everyMs={5000} maxTries={40} />}
         {rows.length === 0 ? (
           <Empty>{q || source || status !== "open" ? "Nothing matches those filters." : "Your inbox is empty. Capture the first thought above."}</Empty>
         ) : (
@@ -92,6 +97,7 @@ export default async function Inbox({ searchParams }: { searchParams: Promise<{ 
                       {t.status === "new" && <Badge tone="accent">New</Badge>}
                       {t.status === "used" && <Badge tone="ok">In an idea</Badge>}
                       {t.privacy === "sensitive" && <Badge tone="warn">Sensitive</Badge>}
+                      {t.transcriptionStatus === "pending" && <Badge tone="accent">Transcribing…</Badge>}
                       {t.transcriptionStatus === "failed" && <Badge tone="danger">Transcription failed</Badge>}
                       {t.transcriptionStatus === "unconfigured" && <Badge tone="warn">Not transcribed</Badge>}
                       {t.hasAnalysis && <Badge>Analysed</Badge>}

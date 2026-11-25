@@ -1,13 +1,16 @@
 "use client";
 
-import { useActionState, useEffect, useRef } from "react";
+import { startTransition, useActionState, useEffect, useRef, useState } from "react";
 import { answerAction } from "@/actions/ai";
 import type { FormState } from "@/actions/public";
 import { useRecorder } from "./useRecorder";
+import { attachUpload } from "./upload";
 
 export function AnswerForm({ ideaId }: { ideaId: string }) {
   const [state, action, pending] = useActionState<FormState, FormData>(answerAction, null);
   const rec = useRecorder();
+  const [uploading, setUploading] = useState(false);
+  const [uploadError, setUploadError] = useState<string | null>(null);
   const ref = useRef<HTMLFormElement>(null);
   useEffect(() => {
     if (state?.ok) {
@@ -21,10 +24,21 @@ export function AnswerForm({ ideaId }: { ideaId: string }) {
     <form
       ref={ref}
       className="space-y-3"
-      action={(fd) => {
+      action={async (fd) => {
+        setUploadError(null);
         const f = rec.asFile();
-        if (f) fd.set("audio", f);
-        return action(fd);
+        if (f) {
+          setUploading(true);
+          try {
+            await attachUpload(fd, "audio", f, "audio", "audioKey");
+          } catch (err) {
+            setUploadError((err as Error).message);
+            setUploading(false);
+            return;
+          }
+          setUploading(false);
+        }
+        startTransition(() => action(fd));
       }}
     >
       <input type="hidden" name="ideaId" value={ideaId} />
@@ -43,11 +57,12 @@ export function AnswerForm({ ideaId }: { ideaId: string }) {
           </button>
         )}
         {rec.clip && <audio controls src={rec.clip.url} className="h-8 max-w-full" />}
-        <button className="btn btn-sm" disabled={pending || rec.recording}>
-          {pending ? (rec.clip ? "Transcribing…" : "Saving…") : "Save answer"}
+        <button className="btn btn-sm" disabled={pending || uploading || rec.recording}>
+          {uploading ? "Uploading…" : pending ? (rec.clip ? "Transcribing…" : "Saving…") : "Save answer"}
         </button>
       </div>
       {rec.error && <p className="text-sm text-danger">{rec.error}</p>}
+      {uploadError && <p className="text-sm text-danger">{uploadError}</p>}
       {state && (
         <p role="status" className={`text-sm ${state.ok ? "text-ok" : "text-danger"}`}>
           {state.message}

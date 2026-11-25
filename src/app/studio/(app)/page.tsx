@@ -7,6 +7,9 @@ import { onboardingSteps } from "@/lib/integrations";
 import { CaptureForm } from "@/components/studio/CaptureForm";
 import { Badge, PageHeader, STAGES, Stat, SOURCE_LABELS, relTime, stageLabel } from "@/components/studio/ui";
 
+// Background transcription (after()) runs within this budget.
+export const maxDuration = 300;
+
 export const metadata = { title: "Dashboard" };
 
 export default async function Dashboard({ searchParams }: { searchParams: Promise<{ welcome?: string }> }) {

@@ -5,7 +5,7 @@ import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { z } from "zod";
 import { db } from "@/db";
-import { campaigns, issueAssets, issues, readerFeedback, repurposedContent } from "@/db/schema";
+import { campaigns, issues, readerFeedback, repurposedContent } from "@/db/schema";
 import { requireUser } from "@/lib/auth";
 import {
   approveIssue,
@@ -21,6 +21,7 @@ import { cancelCampaign, createBroadcast, processCampaign, sendTestEmail } from 
 import { normalizeEmail, testRecipients } from "@/lib/subscribers";
 import { markOnboarding } from "@/lib/settings";
 import { rateLimit } from "@/lib/rate-limit";
+import { createImageAsset } from "@/lib/assets";
 import type { FormState } from "./public";
 
 function refresh(id: string) {
@@ -196,20 +197,19 @@ export async function deleteIssueAction(form: FormData) {
   redirect("/studio/issues");
 }
 
-const IMAGE_TYPES = ["image/jpeg", "image/png", "image/webp", "image/gif"];
-
 export async function uploadImageAction(form: FormData): Promise<{ ok: boolean; markdown?: string; message?: string }> {
   await requireUser();
   const file = form.get("file");
-  if (!(file instanceof File) || !file.size) return { ok: false, message: "No file." };
-  if (!IMAGE_TYPES.includes(file.type)) return { ok: false, message: "Use JPEG, PNG, WebP or GIF." };
-  if (file.size > 4 * 1024 * 1024) return { ok: false, message: "Images must be under 4 MB." };
+  const key = String(form.get("key") ?? "");
   const alt = String(form.get("alt") ?? "").replace(/[[\]]/g, "").slice(0, 200);
-  const [a] = await db
-    .insert(issueAssets)
-    .values({ issueId: String(form.get("id")), mimeType: file.type, sizeBytes: file.size, altText: alt, data: Buffer.from(await file.arrayBuffer()) })
-    .returning({ id: issueAssets.id });
-  return { ok: true, markdown: `![${alt}](/api/assets/${a.id})` };
+  try {
+    const src = key ? { key } : file instanceof File && file.size ? { file } : null;
+    if (!src) return { ok: false, message: "No file." };
+    const id = await createImageAsset(String(form.get("id")), src, alt);
+    return { ok: true, markdown: `![${alt}](/api/assets/${id})` };
+  } catch (err) {
+    return { ok: false, message: (err as Error).message };
+  }
 }
 
 /* ------------------------------------------------- repurposing & feedback */

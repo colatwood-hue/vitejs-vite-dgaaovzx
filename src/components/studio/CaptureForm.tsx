@@ -1,8 +1,9 @@
 "use client";
 
 import Link from "next/link";
-import { useActionState, useEffect, useRef, useState } from "react";
+import { startTransition, useActionState, useEffect, useRef, useState } from "react";
 import { captureThoughtAction, type CaptureState } from "@/actions/thoughts";
+import { attachUpload } from "./upload";
 
 const SOURCES: [string, string][] = [
   ["note", "Note"],
@@ -31,6 +32,8 @@ export function CaptureForm() {
   const [seconds, setSeconds] = useState(0);
   const [audio, setAudio] = useState<{ blob: Blob; url: string; seconds: number } | null>(null);
   const [micError, setMicError] = useState<string | null>(null);
+  const [uploadError, setUploadError] = useState<string | null>(null);
+  const [uploading, setUploading] = useState(false);
   const recRef = useRef<MediaRecorder | null>(null);
   const secondsRef = useRef(0);
   const chunks = useRef<Blob[]>([]);
@@ -94,14 +97,28 @@ export function CaptureForm() {
       ref={formRef}
       id="capture"
       className="card space-y-4 p-4 sm:p-5"
-      action={(fd) => {
-        if (audio) {
-          const ext = audio.blob.type.includes("mp4") ? "m4a" : audio.blob.type.includes("ogg") ? "ogg" : "webm";
-          fd.set("audio", new File([audio.blob], `voice-note.${ext}`, { type: audio.blob.type }));
-          fd.set("recorded", "1");
-          fd.set("durationSeconds", String(audio.seconds));
+      action={async (fd) => {
+        setUploadError(null);
+        setUploading(true);
+        try {
+          const uploaded = fd.get("audio");
+          if (audio) {
+            const ext = audio.blob.type.includes("mp4") ? "m4a" : audio.blob.type.includes("ogg") ? "ogg" : "webm";
+            await attachUpload(fd, "audio", new File([audio.blob], `voice-note.${ext}`, { type: audio.blob.type }), "audio", "audioKey");
+            fd.set("recorded", "1");
+            fd.set("durationSeconds", String(audio.seconds));
+          } else if (uploaded instanceof File && uploaded.size > 0) {
+            await attachUpload(fd, "audio", uploaded, "audio", "audioKey");
+          } else {
+            fd.delete("audio");
+          }
+        } catch (err) {
+          setUploadError((err as Error).message);
+          setUploading(false);
+          return;
         }
-        return action(fd);
+        setUploading(false);
+        startTransition(() => action(fd));
       }}
     >
       <div className="flex items-center justify-between gap-3">
@@ -217,8 +234,8 @@ export function CaptureForm() {
       </details>
 
       <div className="flex flex-wrap items-center gap-3">
-        <button className="btn" disabled={pending || recording}>
-          {pending ? (audio ? "Saving & transcribing…" : "Saving…") : "Save to inbox"}
+        <button className="btn" disabled={pending || uploading || recording}>
+          {uploading ? "Uploading…" : pending ? "Saving…" : "Save to inbox"}
         </button>
         {state && (
           <p role="status" className={`text-sm ${state.ok ? "text-ok" : "text-danger"}`}>
@@ -231,10 +248,12 @@ export function CaptureForm() {
           </p>
         )}
       </div>
-      {state?.transcriptionNote && <p className="text-xs text-warn">Transcription: {state.transcriptionNote}</p>}
-      {state?.transcription && (
-        <blockquote className="border-l-2 border-bronze pl-3 font-serif text-ink-soft">{state.transcription.slice(0, 600)}{state.transcription.length > 600 ? "…" : ""}</blockquote>
+      {uploadError && (
+        <p role="alert" className="text-sm text-danger">
+          {uploadError} Your recording is still here. Try again.
+        </p>
       )}
+      {state?.transcriptionNote && <p className="text-xs text-warn">Transcription: {state.transcriptionNote}</p>}
     </form>
   );
 }

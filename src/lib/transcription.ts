@@ -9,6 +9,7 @@ import { eq } from "drizzle-orm";
 import { db } from "@/db";
 import { audioAssets, thoughts } from "@/db/schema";
 import { env } from "./env";
+import { readAssetBytes } from "./storage";
 
 export function transcriptionConfigured(): { ok: boolean; provider: string; problem?: string } {
   const p = env.transcriptionProvider();
@@ -69,7 +70,7 @@ export async function transcribeThought(thoughtId: string) {
   const [audio] = await db.select().from(audioAssets).where(eq(audioAssets.id, t.audioAssetId));
   await db.update(thoughts).set({ transcriptionStatus: "pending", transcriptionError: null }).where(eq(thoughts.id, t.id));
   try {
-    const text = await transcribeBuffer(audio.data, audio.mimeType);
+    const text = await transcribeBuffer(await readAssetBytes(audio), audio.mimeType);
     await db.update(thoughts).set({ transcription: text, transcriptionStatus: "completed" }).where(eq(thoughts.id, t.id));
     return { ok: true as const, text };
   } catch (err) {

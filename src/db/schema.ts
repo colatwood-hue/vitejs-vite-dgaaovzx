@@ -152,7 +152,9 @@ export const audioAssets = pgTable("audio_assets", {
   sizeBytes: integer("size_bytes").notNull(),
   durationSeconds: integer("duration_seconds"),
   originalFilename: text("original_filename"),
-  data: bytea("data").notNull(),
+  /** Either `data` (database storage) or `storageKey` (object storage) is set. */
+  data: bytea("data"),
+  storageKey: text("storage_key"),
   createdAt: createdAt(),
 });
 
@@ -348,7 +350,8 @@ export const issueAssets = pgTable("issue_assets", {
   mimeType: text("mime_type").notNull(),
   sizeBytes: integer("size_bytes").notNull(),
   altText: text("alt_text").notNull().default(""),
-  data: bytea("data").notNull(),
+  data: bytea("data"),
+  storageKey: text("storage_key"),
   createdAt: createdAt(),
 });
 

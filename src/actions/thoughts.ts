@@ -5,14 +5,15 @@ import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { z } from "zod";
 import { db } from "@/db";
-import { audioAssets, ideaThoughts, ideas, pillars, thoughtPillars, thoughts, thoughtSourceEnum, type ThoughtAnalysis } from "@/db/schema";
+import { ideaThoughts, ideas, pillars, thoughtPillars, thoughts, thoughtSourceEnum, type ThoughtAnalysis } from "@/db/schema";
 import { requireUser } from "@/lib/auth";
 import { analyzeThought } from "@/lib/ai/editorial";
-import { transcribeThought } from "@/lib/transcription";
+import { transcribeThought, transcriptionConfigured } from "@/lib/transcription";
+import { audioAssetFromForm } from "@/lib/assets";
+import { after } from "next/server";
 import { markOnboarding } from "@/lib/settings";
 import type { FormState } from "./public";
 
-const MAX_AUDIO_BYTES = 25 * 1024 * 1024;
 const parseTags = (s: string) =>
   [...new Set(s.split(",").map((t) => t.trim().toLowerCase()).filter(Boolean))].slice(0, 20);
 
@@ -25,7 +26,7 @@ const captureSchema = z.object({
   privacy: z.enum(["private", "sensitive", "shareable"]).default("private"),
 });
 
-export type CaptureState = (FormState & { id?: string; transcription?: string | null; transcriptionNote?: string }) | null;
+export type CaptureState = (FormState & { id?: string; transcribing?: boolean; transcriptionNote?: string }) | null;
 
 export async function captureThoughtAction(_prev: CaptureState, form: FormData): Promise<CaptureState> {
   await requireUser();
@@ -39,30 +40,17 @@ export async function captureThoughtAction(_prev: CaptureState, form: FormData):
   });
   if (!parsed.success) return { ok: false, message: parsed.error.issues[0]?.message ?? "Check the form." };
   const d = parsed.data;
-  const audio = form.get("audio");
-  const hasAudio = audio instanceof File && audio.size > 0;
-  if (!hasAudio && !d.content.trim() && !d.sourceUrl) return { ok: false, message: "Write something, add a link, or record a voice note." };
 
-  let audioAssetId: string | null = null;
-  if (hasAudio) {
-    if (audio.size > MAX_AUDIO_BYTES) return { ok: false, message: "Audio is larger than 25 MB. Try a shorter recording." };
-    const mime = audio.type || "audio/webm";
-    if (!mime.startsWith("audio/") && mime !== "video/webm" && mime !== "video/mp4") return { ok: false, message: "That file isn't an audio file." };
-    const duration = Number(form.get("durationSeconds") ?? "") || null;
-    const [asset] = await db
-      .insert(audioAssets)
-      .values({
-        mimeType: mime,
-        sizeBytes: audio.size,
-        durationSeconds: duration ? Math.round(duration) : null,
-        originalFilename: audio.name?.slice(0, 200) || null,
-        data: Buffer.from(await audio.arrayBuffer()),
-      })
-      .returning({ id: audioAssets.id });
-    audioAssetId = asset.id;
+  let audioAssetId: string | null;
+  try {
+    audioAssetId = await audioAssetFromForm(form);
+  } catch (err) {
+    return { ok: false, message: (err as Error).message };
   }
+  if (!audioAssetId && !d.content.trim() && !d.sourceUrl) return { ok: false, message: "Write something, add a link, or record a voice note." };
 
-  const sourceType = hasAudio && (d.sourceType === "note" || !d.sourceType) ? (form.get("recorded") === "1" ? "voice" : "audio_upload") : d.sourceType;
+  const sourceType = audioAssetId && d.sourceType === "note" ? (form.get("recorded") === "1" ? "voice" : "audio_upload") : d.sourceType;
+  const tx = transcriptionConfigured();
   const [t] = await db
     .insert(thoughts)
     .values({
@@ -71,28 +59,24 @@ export async function captureThoughtAction(_prev: CaptureState, form: FormData):
       originalContent: d.content,
       sourceUrl: d.sourceUrl || null,
       audioAssetId,
-      transcriptionStatus: audioAssetId ? "pending" : "not_needed",
+      transcriptionStatus: !audioAssetId ? "not_needed" : tx.ok ? "pending" : "unconfigured",
+      transcriptionError: audioAssetId && !tx.ok ? tx.problem : null,
       tags: parseTags(d.tags),
       privacy: d.privacy,
     })
     .returning({ id: thoughts.id });
 
   await markOnboarding("firstThought");
-  let transcription: string | null = null;
-  let transcriptionNote: string | undefined;
-  if (audioAssetId) {
-    const r = await transcribeThought(t.id);
-    if (r.ok) transcription = r.text;
-    else transcriptionNote = r.error;
-  }
+  // Respond immediately; transcribe after the response is sent.
+  if (audioAssetId && tx.ok) after(() => transcribeThought(t.id).then(() => undefined));
   revalidatePath("/studio/inbox");
   revalidatePath("/studio");
   return {
     ok: true,
     id: t.id,
-    transcription,
-    transcriptionNote,
-    message: audioAssetId ? (transcription ? "Saved and transcribed." : "Saved. The recording is kept safely; transcription didn't run.") : "Captured.",
+    transcribing: !!audioAssetId && tx.ok,
+    transcriptionNote: audioAssetId && !tx.ok ? tx.problem : undefined,
+    message: !audioAssetId ? "Captured." : tx.ok ? "Saved. Transcribing in the background." : "Saved. The recording is kept safely; transcription isn't set up.",
   };
 }
 

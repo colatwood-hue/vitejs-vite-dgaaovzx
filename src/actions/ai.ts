@@ -3,7 +3,7 @@
 import { eq } from "drizzle-orm";
 import { revalidatePath } from "next/cache";
 import { db } from "@/db";
-import { aiMessages, aiSessions, audioAssets, ideaThoughts, repurposedContent, thoughts } from "@/db/schema";
+import { aiMessages, aiSessions, ideaThoughts, repurposedContent, thoughts } from "@/db/schema";
 import { requireUser } from "@/lib/auth";
 import {
   AngleSchema,
@@ -20,6 +20,7 @@ import {
   selectAngle,
 } from "@/lib/ai/editorial";
 import { transcribeThought } from "@/lib/transcription";
+import { audioAssetFromForm } from "@/lib/assets";
 import { markOnboarding } from "@/lib/settings";
 import type { FormState } from "./public";
 
@@ -77,18 +78,13 @@ export async function answerAction(_prev: FormState, form: FormData): Promise<Fo
   await requireUser();
   try {
     const { ideaId, session } = await sessionFor(form);
-    const audio = form.get("audio");
     let text = String(form.get("answer") ?? "").trim();
-    if (audio instanceof File && audio.size > 0) {
-      if (audio.size > 25 * 1024 * 1024) return { ok: false, message: "Recording too large." };
+    const audioAssetId = await audioAssetFromForm(form);
+    if (audioAssetId) {
       // Preserve the spoken answer as an original thought linked to this idea.
-      const [asset] = await db
-        .insert(audioAssets)
-        .values({ mimeType: audio.type || "audio/webm", sizeBytes: audio.size, data: Buffer.from(await audio.arrayBuffer()) })
-        .returning({ id: audioAssets.id });
       const [t] = await db
         .insert(thoughts)
-        .values({ sourceType: "voice", title: "Interview answer", originalContent: text, audioAssetId: asset.id, transcriptionStatus: "pending", status: "used" })
+        .values({ sourceType: "voice", title: "Interview answer", originalContent: text, audioAssetId, transcriptionStatus: "pending", status: "used" })
         .returning({ id: thoughts.id });
       await db.insert(ideaThoughts).values({ ideaId, thoughtId: t.id }).onConflictDoNothing();
       const r = await transcribeThought(t.id);

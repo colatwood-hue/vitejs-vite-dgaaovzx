@@ -10,6 +10,7 @@ import { getEmailProvider } from "./email";
 import { env } from "./env";
 import { getSettings, senderComplianceGaps } from "./settings";
 import { transcriptionConfigured } from "./transcription";
+import { s3ConfigProblem, storageProvider } from "./storage";
 
 export type Health = "ok" | "configured" | "unconfigured" | "failed" | "optional";
 export type IntegrationRow = { key: string; label: string; status: Health; detail: string };
@@ -57,6 +58,17 @@ export async function integrationHealth(): Promise<IntegrationRow[]> {
     label: "Voice transcription",
     status: tx.ok ? "configured" : tx.provider ? "failed" : "optional",
     detail: tx.ok ? `Provider: ${tx.provider}` : tx.problem ?? "",
+  });
+  const storage = storageProvider();
+  const storageProblem = s3ConfigProblem();
+  rows.push({
+    key: "storage",
+    label: "File storage (voice notes & images)",
+    status: storage === "s3" ? (storageProblem ? "failed" : "configured") : "optional",
+    detail:
+      storage === "s3"
+        ? storageProblem ?? `Object storage: bucket ${process.env.S3_BUCKET}${process.env.S3_ENDPOINT ? ` at ${new URL(process.env.S3_ENDPOINT).host}` : ""}`
+        : "Database storage. Fine to start; on Vercel uploads are capped near 4.5 MB. Configure S3/R2 for long recordings.",
   });
   rows.push({
     key: "cron",
