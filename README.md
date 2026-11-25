@@ -9,24 +9,25 @@ This repository holds both halves of the publication:
 
 > The software should never become more complicated than writing the newsletter itself.
 
-## Quick start (local)
+## Try it locally (beta, no API keys)
 
-Requirements: Node 20+, PostgreSQL 14+.
+Requirements: Node 20+ and Docker Desktop.
 
 ```bash
 npm install
-cp .env.example .env          # set DATABASE_URL, AUTH_SECRET, SETUP_TOKEN
-npm run db:migrate
-npm run db:seed               # pillars + the 12 launch concepts (no fake subscribers)
-npm run dev                   # http://localhost:3000
+docker compose up -d     # local Postgres
+npm run beta             # creates .env, migrates, seeds, builds, starts. Prints a setup token.
 ```
 
-Open `http://localhost:3000/studio/setup`, enter your `SETUP_TOKEN`, and create the owner account. Email is in **simulated** mode until you configure a provider, so nothing is ever delivered by accident.
+Open <http://localhost:3000/studio/setup>, paste the token, create your account. Email is **simulated** and AI/transcription are off until you add keys. See [docs/BETA.md](docs/BETA.md).
+
+Using your own Postgres instead? Copy `.env.example` to `.env`, set `DATABASE_URL`, then `npm run beta`.
 
 ## Documentation
 
 | Doc | What's in it |
 |---|---|
+| [docs/BETA.md](docs/BETA.md) | Running the local beta without any API keys |
 | [docs/SETUP.md](docs/SETUP.md) | Environment variables, local development, deployment (Vercel + Postgres), integration setup (Resend, Anthropic, transcription, cron) |
 | [docs/GUIDE.md](docs/GUIDE.md) | Administrator onboarding and the editorial workflow, idea to inbox |
 | [docs/STATUS.md](docs/STATUS.md) | What's working, what's partial, what's planned; tests, acceptance results, known limitations |
@@ -54,6 +55,7 @@ e2e/acceptance.mjs     22-step browser walkthrough of the acceptance workflow
 
 | Command | |
 |---|---|
+| `npm run beta` / `beta:dev` | set up (idempotent) and start the local beta (production build / hot reload) |
 | `npm run dev` / `build` / `start` | Next.js |
 | `npm run check` | lint + typecheck + tests + build |
 | `npm test` | Vitest (needs a `thedash_test` database, or `TEST_DATABASE_URL`) |
